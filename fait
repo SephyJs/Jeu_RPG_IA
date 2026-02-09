@@ -63,3 +63,4 @@ Modifications faites aujourd'hui
 - Creation d'un `README.txt` (racine projet) avec prerequis complets, installation Python, installation/commande Ollama, modeles utilises par defaut, variables d'environnement et depannage rapide
 - Ajout du support `.env` automatique pour la configuration des modeles IA (chargement au demarrage dans `app/gamemaster/models.py`), creation de `.env.example` + `.env`, ajout de `python-dotenv` dans `requirements.txt`, et mise a jour de `README.txt` pour documenter l'usage
 - Redemarrage propre du serveur en arriere-plan (`python3 -m app.main`) apres nettoyage des anciennes instances, avec verification du port `8080` et logs (`/tmp/ataryxia_server.log`)
+- Preparation GitHub: creation d'un `.gitignore` adapte (exclusion `.env`, `.venv`, `saves/`, contenus generes et artefacts locaux), initialisation du depot Git en branche `main`, staging des fichiers utiles et creation du commit initial `Initial project import`
