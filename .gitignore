@@ -34,6 +34,8 @@ Thumbs.db
 # Runtime / local data
 *.log
 saves/
+a_faire
+fait
 
 # Generated content
 data/npcs/generated/
