@@ -1,5 +1,10 @@
 # Jeu_RPG_IA
 
+## Description breve
+Jeu de role narratif assiste par IA, avec interface web en Python (NiceGUI).
+Le joueur interagit avec des PNJ, des quetes, des competences, du loot et une economie dynamique.
+Les dialogues et certaines generations de contenu sont pilotes via Ollama (modeles locaux).
+
 ## Statut du projet
 Projet en cours de developpement (WIP).
 
