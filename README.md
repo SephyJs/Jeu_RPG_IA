@@ -1,5 +1,13 @@
 # Jeu_RPG_IA
 
+## Statut du projet
+Projet en cours de developpement (WIP).
+
+Ce depot evolue regulierement:
+- des fonctionnalites sont encore en construction
+- l'equilibrage est en cours
+- des bugs et changements de compatibilite peuvent apparaitre
+
 ## Lancement rapide
 
 ### Prerequis
