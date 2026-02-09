@@ -45,6 +45,17 @@ def build_canon_summary(state: dict, user_text: str) -> str:
     world_datetime = str(state.get("world_datetime") or "").strip() if isinstance(state, dict) else ""
     if not world_datetime:
         world_datetime = format_fantasy_datetime(world_time_minutes)
+    selected_npc = str(state.get("selected_npc") or "").strip() if isinstance(state, dict) else ""
+    selected_npc_key = str(state.get("selected_npc_key") or "").strip() if isinstance(state, dict) else ""
+    short_term_memory = str(state.get("conversation_short_term") or "").strip() if isinstance(state, dict) else ""
+    long_term_memory = str(state.get("conversation_long_term") or "").strip() if isinstance(state, dict) else ""
+    global_memory = str(state.get("conversation_global_memory") or "").strip() if isinstance(state, dict) else ""
+    if not short_term_memory:
+        short_term_memory = "(aucun echange recent)"
+    if not long_term_memory:
+        long_term_memory = "(aucune memoire long terme)"
+    if not global_memory:
+        global_memory = "(aucune memoire globale)"
     return (
         f"Lieu: {loc}\n"
         f"LieuID: {loc_id}\n"
@@ -59,6 +70,11 @@ def build_canon_summary(state: dict, user_text: str) -> str:
         f"CompetencesJoueur: {known_skills}\n"
         f"PointsCompetenceDisponibles: {skill_points}\n"
         f"DernierEchange: {last_trade_line}\n"
+        f"PNJSelectionne: {selected_npc}\n"
+        f"PNJSelectionneKey: {selected_npc_key}\n"
+        f"MemoireCourtTermePNJ:\n{short_term_memory}\n"
+        f"MemoireLongTermePNJ:\n{long_term_memory}\n"
+        f"MemoireLongTermeMonde:\n{global_memory}\n"
         f"Message: {user_text}\n"
     )
 
@@ -118,6 +134,8 @@ Règles d'identité (obligatoires):
 - Tu ne changes jamais ton métier/fonction pour faire plaisir au joueur.
 - Si le joueur t'attribue un autre métier/fonction, tu le corriges explicitement et poliment.
 - Tu ne valides pas une affirmation fausse sur ton identité (nom, rôle, passé).
+- Tu utilises la memoire court terme/long terme du canon pour rester coherent d'un echange a l'autre.
+- Si tu ne te souviens pas d'un detail, dis-le au lieu d'inventer.
 
 Canon:
 {canon}

@@ -5,6 +5,9 @@ Jeu de role narratif assiste par IA, avec interface web en Python (NiceGUI).
 Le joueur interagit avec des PNJ, des quetes, des competences, du loot et une economie dynamique.
 Les dialogues et certaines generations de contenu sont pilotes via Ollama (modeles locaux).
 
+## Apercu
+![Apercu du projet](assets/img_promo.png)
+
 ## Statut du projet
 Projet en cours de developpement (WIP).
 

@@ -5,6 +5,11 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.gamemaster.conversation_memory import (
+    sanitize_global_memory_payload,
+    sanitize_long_term_payload,
+    sanitize_short_term_payload,
+)
 from app.gamemaster.location_manager import MAP_ANCHORS
 from app.gamemaster.npc_manager import normalize_profile_role_in_place
 from app.ui.state.game_state import ChatMessage, Choice, GameState, Scene
@@ -160,6 +165,9 @@ class SaveManager:
             "npc_quests_given": dict(state.npc_quests_given),
             "quest_generation_in_progress": [],
             "quest_counters": dict(state.quest_counters),
+            "conversation_short_term": state.conversation_short_term,
+            "conversation_long_term": state.conversation_long_term,
+            "conversation_global_long_term": state.conversation_global_long_term,
             "gm_state": state.gm_state,
         }
 
@@ -448,6 +456,12 @@ class SaveManager:
                 "player_messages_sent": 0,
                 "dungeon_floors_cleared": 0,
             }
+
+        state.conversation_short_term = sanitize_short_term_payload(raw.get("conversation_short_term"))
+        state.conversation_long_term = sanitize_long_term_payload(raw.get("conversation_long_term"))
+        state.conversation_global_long_term = sanitize_global_memory_payload(
+            raw.get("conversation_global_long_term")
+        )
 
         gm_state = raw.get("gm_state", {})
         state.gm_state = gm_state if isinstance(gm_state, dict) else {"player_name": "l'Éveillé", "location": "inconnu", "flags": {}}

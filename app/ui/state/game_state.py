@@ -96,6 +96,9 @@ class GameState:
             "dungeon_floors_cleared": 0,
         }
     )
+    conversation_short_term: Dict[str, List[dict]] = field(default_factory=dict)
+    conversation_long_term: Dict[str, List[dict]] = field(default_factory=dict)
+    conversation_global_long_term: List[dict] = field(default_factory=list)
     # Temps de monde persistant (minutes écoulées depuis l'epoch fantasy du jeu).
     world_time_minutes: int = (2 * 24 * 60) + (8 * 60)
 

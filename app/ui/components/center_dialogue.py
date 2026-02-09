@@ -26,6 +26,14 @@ from app.gamemaster.player_sheet_manager import PlayerSheetManager
 from app.gamemaster.loot_manager import LootManager
 from app.gamemaster.skill_manager import SkillManager, SkillDef
 from app.gamemaster.economy_manager import EconomyManager
+from app.gamemaster.conversation_memory import (
+    build_global_memory_context,
+    build_long_term_context,
+    build_short_term_context,
+    ensure_conversation_memory_state,
+    remember_dialogue_turn,
+    remember_system_event,
+)
 from app.gamemaster.world_time import format_fantasy_datetime
 
 from app.ui.components.right_narrator import pick_random_video_url
@@ -1023,6 +1031,7 @@ async def _maybe_award_loot_from_dungeon_event(state: GameState, event: dict) ->
 def center_dialogue(state: GameState, on_change) -> None:
     _ensure_quest_state(state)
     _ensure_player_sheet_state(state)
+    ensure_conversation_memory_state(state)
     ensure_npc_world_state(state)
     sync_npc_registry_from_profiles(state)
     scene = state.current_scene()
@@ -1506,6 +1515,7 @@ async def _send_creation_message(state: GameState, inp: ui.input, on_change) -> 
 
 async def _send_to_npc(state: GameState, inp: ui.input, client, on_change) -> None:
     _ensure_player_sheet_state(state)
+    ensure_conversation_memory_state(state)
     if not state.player_sheet_ready:
         state.push("Système", "Termine d'abord la creation de personnage.", count_for_media=False)
         on_change()
@@ -1516,11 +1526,11 @@ async def _send_to_npc(state: GameState, inp: ui.input, client, on_change) -> No
     if not text:
         return
 
+    scene = state.current_scene()
     npc = getattr(state, "selected_npc", None)
     npc_key: str | None = None
     npc_profile: dict | None = None
     if npc:
-        scene = state.current_scene()
         npc_key = resolve_scene_npc_key(state, npc, scene.id)
         npc_profile = state.npc_profiles.get(npc_key)
 
@@ -1578,6 +1588,7 @@ async def _send_to_npc(state: GameState, inp: ui.input, client, on_change) -> No
         ]
         if npc and npc_key:
             state.gm_state["selected_npc"] = npc
+            state.gm_state["selected_npc_key"] = npc_key
             selected_profile = state.npc_profiles.get(npc_key)
             if isinstance(selected_profile, dict):
                 state.gm_state["selected_npc_profile"] = selected_profile
@@ -1585,7 +1596,12 @@ async def _send_to_npc(state: GameState, inp: ui.input, client, on_change) -> No
                 state.gm_state.pop("selected_npc_profile", None)
         else:
             state.gm_state.pop("selected_npc", None)
+            state.gm_state.pop("selected_npc_key", None)
             state.gm_state.pop("selected_npc_profile", None)
+
+        state.gm_state["conversation_short_term"] = build_short_term_context(state, npc_key, max_lines=12)
+        state.gm_state["conversation_long_term"] = build_long_term_context(state, npc_key, max_items=10)
+        state.gm_state["conversation_global_memory"] = build_global_memory_context(state, max_items=8)
     except Exception:
         pass
 
@@ -1597,13 +1613,37 @@ async def _send_to_npc(state: GameState, inp: ui.input, client, on_change) -> No
     if npc_key:
         state.npc_dialogue_counts[npc_key] = max(0, _safe_int(state.npc_dialogue_counts.get(npc_key), 0) + 1)
 
-    _apply_trade_from_player_message(
+    trade_outcome = _apply_trade_from_player_message(
         state,
         user_text=text,
         selected_npc=npc,
         npc_key=npc_key,
         selected_profile=npc_profile,
     )
+
+    if isinstance(trade_outcome, dict) and bool(trade_outcome.get("attempted")):
+        trade_context = trade_outcome.get("trade_context") if isinstance(trade_outcome.get("trade_context"), dict) else {}
+        action = str(trade_context.get("action") or "").strip()
+        status = str(trade_context.get("status") or "").strip()
+        item_id = str(trade_context.get("item_id") or trade_context.get("query") or "").strip()
+        qty_done = max(0, _safe_int(trade_context.get("qty_done"), 0))
+        detail = item_id
+        if qty_done > 0:
+            detail = f"{item_id} x{qty_done}" if item_id else f"x{qty_done}"
+        memory_line = f"Economie ({action or 'trade'}): {status or 'inconnu'}"
+        if detail:
+            memory_line += f" | {detail}"
+        remember_system_event(
+            state,
+            fact_text=memory_line,
+            npc_key=npc_key,
+            npc_name=str(npc or ""),
+            scene_id=scene.id,
+            scene_title=scene.title,
+            world_time_minutes=state.world_time_minutes,
+            kind="trade",
+            importance=4,
+        )
 
     state.gm_state["player_gold"] = max(0, _safe_int(state.player.gold, 0))
     state.gm_state["inventory_summary"] = _economy_manager.inventory_summary(state, state.item_defs)
@@ -1640,6 +1680,20 @@ async def _send_to_npc(state: GameState, inp: ui.input, client, on_change) -> No
         except Exception:
             pass
         set_narrator_text_js(client, res.narration)
+
+    try:
+        remember_dialogue_turn(
+            state,
+            npc_key=npc_key,
+            npc_name=str(res.speaker or npc or "PNJ"),
+            player_text=text,
+            npc_reply=str(res.dialogue or ""),
+            scene_id=scene.id,
+            scene_title=scene.title,
+            world_time_minutes=state.world_time_minutes,
+        )
+    except Exception:
+        pass
 
     pre_stats = state.player_sheet.get("stats", {}) if isinstance(state.player_sheet, dict) and isinstance(state.player_sheet.get("stats"), dict) else {}
     pre_level = max(1, _safe_int(pre_stats.get("niveau"), 1))
