@@ -1,0 +1,65 @@
+Modifications faites aujourd'hui
+
+- Regle: ajouter ici automatiquement chaque tache terminee
+- Creation du fichier `rappel`
+- Ajout de la liste des taches restantes dans `rappel`
+- Creation du fichier `modifications_aujourdhui`
+- Mise en place d'un affichage smartphone responsive sur la page `/game`
+- Ajout de volets retractables gauche/droite sur mobile
+- Reduction de la taille des boutons (choix, lieux, PNJ, actions) sur petit ecran
+- Correction d'une erreur 500 liee a l'integration des drawers NiceGUI
+- Correction de l'affichage du metier PNJ (role placeholder "Metier/Fonction")
+- Normalisation automatique du champ `role` au chargement/sauvegarde des profils PNJ et des saves
+- Renommage des fichiers de suivi en `a_faire` et `fait`
+- Creation de la page `/prototype-2d` avec un debut de jeu 2D en vue de dessus (deplacement clavier + boutons)
+- Ajout d'un acces rapide "Prototype 2D" depuis la page `/game`
+- Ajustement du suivi: la tache 2D est retiree de `a_faire` et remplacee par un test de la nouvelle page
+- Correction de la 500 sur la page prototype: remplacement de `ui.canvas` par une grille HTML/CSS compatible avec la version NiceGUI locale
+- Ajout d'un alias de route `/prototypege` (meme prototype que `/prototype-2d`)
+- Ajout d'une interaction PNJ dans la page prototype: bouton `Parler` visible a proximite et dialogue affiche au clic
+- PNJ rendus non traversants dans la page prototype (collision sur leur case + message de blocage)
+- Integration des tiles du dossier `assets/Tiles`: mapping sol/mur/eau vers sprites et rendu des maps avec ces tiles
+- Ajout d'une generation de map Mistral (JSON valide) avec placement automatique des bonnes tiles selon les symboles
+- Autotiling des murs ajoute (coins, bords, centre) pour un rendu de map plus propre
+- Generation Mistral etendue avec 3 presets de scene sur la page prototype: exterieur, interieur auberge, etage donjon
+- Generation Mistral rendue tolerante: normalisation auto des maps invalides (taille/symboles/bordures) + fallback par preset
+- Stabilisation du rendu: sols moins aleatoires, nettoyage des ilots de murs, et style force selon preset (exterieur/auberge/donjon)
+- Renommage des tiles utilisees en alias lisibles (`assets/Tiles/TilesNamed`) et migration du prototype 2D vers ces noms (plus de references numeriques directes)
+- Renommage complet des 132 tiles avec noms lisibles + suppression des fichiers numeriques originaux et ajout du mapping (`assets/Tiles/TilesNamed/tiles_mapping.tsv`)
+- Renforcement tiles murs: noms explicites coin/cote/remplissage + autotiling corrige (plus de faux coins) + validation structurelle des maps Mistral
+- Ajout de 3 boutons de test de generation sur le prototype (`Exterieur`, `Batiment`, `Donjons`) avec preset force au clic
+- Renommage du preset interne `auberge` en `batiment` partout (bouton, style, fallback, validation, prompt Mistral) avec compatibilite alias
+- Generation exterieur enrichie: ajout automatique de batiments (toits/murs/portes) via assets + prompt Mistral renforce pour inclure des emprises de batiments
+- Correction du crash `list index out of range` en generation map: points critiques dynamiques, normalisation grille forcee et fallback automatique en cas d'exception
+- Creation d'un fichier de configuration des villes et minimums de batiments (`data/villes_batiments_minimums.json`) avec profils par taille et overrides par ville (ex: Lumeria)
+- Branchement de la generation exterieure sur `data/villes_batiments_minimums.json` (selection ville, quotas mini -> cible prototype, prompt Mistral contextualise, placement dynamique de batiments par type)
+- Implementation d'un systeme de quetes dans `/game`: bouton `Demander une quete` apres plusieurs messages PNJ, onglet `Quetes` (panneau gauche), progression automatique (messages, exploration, ancrage, or, donjon), completion/recompenses (or, items, reductions boutique, bonus temple) et sauvegarde/chargement de l'etat des quetes
+- Correction IA PNJ: renforcement de la coherence d'identite/metier (un PNJ ne valide plus un mauvais role), avec regles explicites dans le prompt dialogue et fallback sur le profil du PNJ selectionne pendant le tour
+- Refonte PNJ de Lumeria: suppression du doublon `Aubergiste` en place centrale, ajout de nouveaux habitants, creation de lieux metiers (`forge_01`, `boutique_01`, `infirmerie_01`) avec PNJ dedies, et migration automatique des lieux statiques au chargement de sauvegarde
+- Ajout d'une fiche joueur JSON pilotee par IA (template dedie), onboarding obligatoire avant acces aux choix/PNJ (pseudo, genre, apparence, atouts/personnalite), mise a jour automatique de la fiche dans l'onglet `Fiche`, persistence save/load, et progression interpretee par Mistral depuis le chat (XP + stats)
+- Ajout d'un journal de progression dans la fiche personnage (historique horodate des gains XP/stats + raison), alimente automatiquement a chaque progression et persiste dans les sauvegardes
+- Ajout d'un bouton `Vider le journal` dans l'onglet fiche personnage + purge des sauvegardes existantes (`saves/slot_*.json` et `saves/meta.json`)
+- Ajout d'un systeme de loot aleatoire et equitable pilote par Mistral: generation de butin sur donjons, creation auto des items inexistants en JSON (`data/items`), extension du modele item (stats/effets/rarete/slot), equipement (arme/armure/accessoires), et application des bonus d'equipement aux stats effectives du joueur
+- Fiche personnage: repartition IA des stats de depart ajustee sur 60 points (45 de base + 15 points d'atouts), avec bonus par stat entre 2 et 5 selon les atouts/description joueur et affichage d'un resume de la repartition dans le message systeme
+- Systeme de competences ajoute dans `/game`: onglet `Competences`, apprentissage via PNJ (bouton `S'entrainer`), depense de points de competence, chance de reussite selon stats + role du PNJ, acquisition/renforcement des competences, gain de points de competence a la montee de niveau, persistance save/load, et regles GM renforcées pour eviter les sorts/techniques non apprises en debut de jeu
+- Competences dynamiques: lors d'un entrainement PNJ, l'IA peut maintenant choisir une competence existante OU en creer une nouvelle si elle n'existe pas (sans limite de style: magie, forge, soins, service d'auberge, etc.), puis l'ajouter automatiquement au catalogue `data/skills_catalog.json`
+- Systeme de niveaux de competences ajoute: chaque competence a maintenant `niveau`, `xp`, `xp_to_next`, `uses`, gagne de l'XP quand elle est utilisee en jeu et pendant l'entrainement, monte selon une courbe exponentielle (non lineaire), affiche sa progression dans l'onglet `Competences`, et journalise les evolutions
+- Apprentissage passif ajoute (sans retirer le bouton `S'entrainer`): les actions repetees dans le chat (ex: balayer a l'auberge, forge, soins, magie...) remplissent un compteur par intention et peuvent debloquer automatiquement une competence (creation IA/catalogue si besoin), avec sauvegarde du suivi passif et affichage de progression dans l'onglet `Competences`
+- Detection d'intentions rendue plus automatique et robuste aux fautes de frappe: extraction IA des intentions + fallback fuzzy (approximation), normalisation/correction des labels d'intention (evite les doublons `balyage`/`balayage`), matching flou des competences utilisees, et apprentissage passif qui fonctionne meme avec orthographe imparfaite
+- Nettoyage warning Pydantic au demarrage: champ `NPCSpeechStyle.register` renomme en interne avec alias (`register_style` <-> `register`) pour supprimer l'avertissement de shadowing, tout en gardant la compatibilite des JSON PNJ existants
+- PNJ: correction de generation `genre` pour eviter `inconnu` (normalisation + inference + fallback deterministe), ajout du champ `identity.species` pour les races/styles fantasy (humain, elfe, nain, fee, homme-bete, drakeide, dragon, etc.), renforcement du prompt IA, affichage espece/genre dans la carte dialogue, normalisation auto des PNJ au chargement des sauvegardes, et migration des fiches PNJ existantes dans `data/npcs/generated`
+- Creation fiche joueur: correction du blocage sur la question de temperament (`persona`) en ignorant les valeurs vides renvoyees par l'IA lors de la fusion du patch, ce qui evite d'ecraser les infos heuristiques (ex: "je suis calculateur") et supprime la boucle de questionnement
+- Villes/ruelles: mise en place d'un graphe de deplacement par ville (pas tous les lieux accessibles d'un coup), preset Lumeria avec parcours en ruelles (centre -> auberge/forge, puis lieux secondaires), generation automatique d'une mini-carte de ville (plusieurs zones) lors de la premiere arrivee dans une ville inconnue, et liaison automatique des zones entre elles
+- UI navigation: ajout dans l'onglet `Carte` de boutons de deplacement locaux (`➡ Aller vers ...`) et d'entree de batiments (`Entrer dans ...`), suppression des boutons de lieux du centre pour l'alleger, et ajout de PNJ de rue aleatoires en mouvement lors des deplacements dans les scenes de ruelles
+- Temps/date fantasy: ajout d'un calendrier fantasy persistant (date + heure du monde), affichage dans l'onglet `Carte` et au centre, avance du temps selon actions/deplacements/discussions, et mise en place d'horaires d'ouverture des lieux (ex: marchands/boutique/forge/temple) avec blocage des entrees quand c'est ferme
+- Navigation actions: deplacement des actions `Explorer un nouveau lieu` et `Donjon` vers l'onglet `Carte`, et simplification du centre pour se concentrer sur les interactions PNJ/quetes/competences
+- Ajout d'un onglet `PNJ` (panneau gauche): liste des PNJ presents avec bouton `Parler`, generation de fiche si absente, et selection directe du PNJ pour dialoguer
+- PNJ persistants renforces: registre monde + bindings de scene sauvegardes, chargement auto des JSON PNJ existants (`data/npcs/generated`), et reapparition aleatoire de PNJ connus dans les ruelles sans suppression de leurs fiches
+- Systeme d'economie PNJ ajoute dans `/game`: achats/ventes/dons/echanges detectes dans le chat, verification de stock/or avant transaction, debit/credit d'or, deduction/ajout des quantites d'items dans l'inventaire, creation d'objet commercable si necessaire, et transmission du contexte economique a l'IA (`OrJoueur`, `InventaireResume`, `DernierEchange`)
+- Quetes secretes (charite): un don a un mendiant peut maintenant declencher une quete cachee non garantie, avec suivi dans l'onglet quetes et recompenses associees
+- Correction erreur 500 `/game`: robustification du registre PNJ quand `aliases` vaut `null` (fallback liste vide), ce qui supprime le crash `TypeError: 'NoneType' object is not iterable`
+- Audit et refonte de `requirements.txt` pour coller au projet: passage a une liste de dependances directes (nicegui, pydantic, httpx) + ajout explicite de `moviepy` pour les scripts `tools/`, avec verification des imports et `pip check` OK
+- Generation d'un lockfile complet `requirements-lock.txt` depuis l'environnement `.venv` (`pip freeze`) pour installation reproductible
+- Creation d'un `README.txt` (racine projet) avec prerequis complets, installation Python, installation/commande Ollama, modeles utilises par defaut, variables d'environnement et depannage rapide
+- Ajout du support `.env` automatique pour la configuration des modeles IA (chargement au demarrage dans `app/gamemaster/models.py`), creation de `.env.example` + `.env`, ajout de `python-dotenv` dans `requirements.txt`, et mise a jour de `README.txt` pour documenter l'usage
+- Redemarrage propre du serveur en arriere-plan (`python3 -m app.main`) apres nettoyage des anciennes instances, avec verification du port `8080` et logs (`/tmp/ataryxia_server.log`)

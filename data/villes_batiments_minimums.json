@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "description": "Configuration des minimums de batiments par ville. Reglable selon la taille de la ville et des overrides locaux.",
+  "merge_strategy": "max_profile_and_override",
+  "allow_manual_override": true,
+  "prototype_exterieur_scale": 0.16,
+  "prototype_exterieur_min_buildings": 2,
+  "prototype_exterieur_max_buildings": 9,
+  "building_catalog": [
+    "maison",
+    "auberge",
+    "taverne",
+    "temple",
+    "forge",
+    "marchand_general",
+    "marchand_esclaves",
+    "herboriste",
+    "caserne",
+    "bibliotheque"
+  ],
+  "size_profiles": {
+    "hameau": {
+      "maison": 4,
+      "auberge": 0,
+      "taverne": 0,
+      "temple": 0,
+      "forge": 0,
+      "marchand_general": 1,
+      "marchand_esclaves": 0,
+      "herboriste": 0,
+      "caserne": 0,
+      "bibliotheque": 0
+    },
+    "petite_ville": {
+      "maison": 8,
+      "auberge": 1,
+      "taverne": 1,
+      "temple": 0,
+      "forge": 1,
+      "marchand_general": 1,
+      "marchand_esclaves": 0,
+      "herboriste": 1,
+      "caserne": 0,
+      "bibliotheque": 0
+    },
+    "ville_moyenne": {
+      "maison": 16,
+      "auberge": 1,
+      "taverne": 1,
+      "temple": 1,
+      "forge": 1,
+      "marchand_general": 2,
+      "marchand_esclaves": 0,
+      "herboriste": 1,
+      "caserne": 1,
+      "bibliotheque": 0
+    },
+    "grande_ville": {
+      "maison": 28,
+      "auberge": 2,
+      "taverne": 2,
+      "temple": 1,
+      "forge": 2,
+      "marchand_general": 3,
+      "marchand_esclaves": 1,
+      "herboriste": 2,
+      "caserne": 1,
+      "bibliotheque": 1
+    },
+    "capitale": {
+      "maison": 45,
+      "auberge": 3,
+      "taverne": 3,
+      "temple": 2,
+      "forge": 2,
+      "marchand_general": 4,
+      "marchand_esclaves": 1,
+      "herboriste": 3,
+      "caserne": 2,
+      "bibliotheque": 2
+    }
+  },
+  "forbidden_by_size": {
+    "hameau": [
+      "marchand_esclaves"
+    ],
+    "petite_ville": [
+      "marchand_esclaves"
+    ]
+  },
+  "cities": {
+    "lumeria": {
+      "size": "grande_ville",
+      "minimum_buildings_override": {
+        "auberge": 2,
+        "temple": 1,
+        "maison": 3,
+        "taverne": 1,
+        "forge": 1,
+        "marchand_general": 1,
+        "marchand_esclaves": 1
+      },
+      "notes": "Exemple demande: 2 auberges, 1 temple, 3 maisons, 1 taverne, 1 forge, 1 marchand, 1 marchand d'esclaves."
+    },
+    "brumelac": {
+      "size": "petite_ville",
+      "minimum_buildings_override": {
+        "auberge": 1,
+        "temple": 0,
+        "maison": 6,
+        "taverne": 1,
+        "forge": 1,
+        "marchand_general": 2,
+        "marchand_esclaves": 0
+      }
+    },
+    "karst": {
+      "size": "ville_moyenne",
+      "minimum_buildings_override": {
+        "auberge": 1,
+        "temple": 1,
+        "maison": 12,
+        "taverne": 1,
+        "forge": 1,
+        "marchand_general": 2,
+        "marchand_esclaves": 0
+      }
+    }
+  }
+}

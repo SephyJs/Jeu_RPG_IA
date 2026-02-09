@@ -1,0 +1,77 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "char_id": ""
+  },
+  "char_name": "",
+  "identity": {
+    "social_class": "",
+    "age_apparent": "inconnu",
+    "gender": "",
+    "family": {
+      "origin": "",
+      "relatives": [],
+      "reputation": ""
+    }
+  },
+  "speech_style": {
+    "register": "neutre",
+    "verbosity": "equilibre",
+    "max_sentences_per_reply": 3,
+    "vocabulary": "simple",
+    "pronouns": "vouvoiement",
+    "dialogue_tag": ""
+  },
+  "char_persona": "",
+  "first_message": "",
+  "lore_details": {
+    "passives": [],
+    "backstory": ""
+  },
+  "description_visuelle": {
+    "courte": "",
+    "longue": "",
+    "aura": ""
+  },
+  "equipment": {
+    "tenue": "",
+    "arme": "",
+    "accessoires": [],
+    "objets_portes": []
+  },
+  "world_logic": {
+    "knowledge_base": [],
+    "goals": [],
+    "secrets": []
+  },
+  "stats": {
+    "niveau": 1,
+    "experience": 0,
+    "pv": 20,
+    "pv_max": 20,
+    "mana": 10,
+    "mana_max": 10,
+    "force": 5,
+    "intelligence": 5,
+    "magie": 5,
+    "defense": 5,
+    "sagesse": 5,
+    "agilite": 5,
+    "dexterite": 5,
+    "chance": 5,
+    "charisme": 5
+  },
+  "dynamic_flags": {
+    "is_met": false,
+    "is_angry": false,
+    "current_mood": "neutre"
+  },
+  "relations": {
+    "inconnu": {
+      "affinite": 0,
+      "confiance": 5,
+      "desir": 0,
+      "statut": "etranger"
+    }
+  }
+}

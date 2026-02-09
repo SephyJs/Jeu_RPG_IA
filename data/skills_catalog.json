@@ -1,0 +1,303 @@
+{
+  "version": "1.0",
+  "skills": [
+    {
+      "id": "analyse_arcane",
+      "name": "Analyse arcane",
+      "category": "connaissance",
+      "description": "Detecte des residus magiques.",
+      "difficulty": 2,
+      "primary_stats": [
+        "intelligence",
+        "sagesse"
+      ],
+      "trainer_roles": [
+        "mage",
+        "erudit",
+        "alchimiste"
+      ],
+      "effects": [
+        "analyse_objet"
+      ]
+    },
+    {
+      "id": "balayage_tactique",
+      "name": "Balayage tactique",
+      "category": "service",
+      "description": "Technique developpee avec Pratique (Prison - Couloir humide).",
+      "difficulty": 2,
+      "primary_stats": [
+        "dexterite",
+        "charisme"
+      ],
+      "trainer_roles": [
+        "prison - couloir humide"
+      ],
+      "effects": [
+        "effet_balayage"
+      ]
+    },
+    {
+      "id": "bouclier_arcane",
+      "name": "Bouclier arcane",
+      "category": "magie",
+      "description": "Barriere magique temporaire.",
+      "difficulty": 4,
+      "primary_stats": [
+        "magie",
+        "intelligence"
+      ],
+      "trainer_roles": [
+        "mage",
+        "arcaniste"
+      ],
+      "effects": [
+        "protection_magique"
+      ]
+    },
+    {
+      "id": "charge_brutale",
+      "name": "Charge brutale",
+      "category": "combat",
+      "description": "Percussion puissante au corps-a-corps.",
+      "difficulty": 3,
+      "primary_stats": [
+        "force",
+        "defense"
+      ],
+      "trainer_roles": [
+        "mercenaire",
+        "soldat",
+        "garde"
+      ],
+      "effects": [
+        "attaque_lourde"
+      ]
+    },
+    {
+      "id": "etincelle",
+      "name": "Etincelle",
+      "category": "magie",
+      "description": "Sort mineur offensif.",
+      "difficulty": 2,
+      "primary_stats": [
+        "magie",
+        "intelligence"
+      ],
+      "trainer_roles": [
+        "mage",
+        "arcaniste",
+        "sorcier"
+      ],
+      "effects": [
+        "sort_offensif_novice"
+      ]
+    },
+    {
+      "id": "frappe_precise",
+      "name": "Frappe precise",
+      "category": "combat",
+      "description": "Attaque melee plus stable.",
+      "difficulty": 1,
+      "primary_stats": [
+        "force",
+        "dexterite"
+      ],
+      "trainer_roles": [
+        "forgeron",
+        "garde",
+        "mercenaire"
+      ],
+      "effects": [
+        "bonus_melee_legere"
+      ]
+    },
+    {
+      "id": "garde_fermee",
+      "name": "Garde fermee",
+      "category": "defense",
+      "description": "Renforce la posture defensive.",
+      "difficulty": 1,
+      "primary_stats": [
+        "defense",
+        "sagesse"
+      ],
+      "trainer_roles": [
+        "garde",
+        "templier",
+        "soldat"
+      ],
+      "effects": [
+        "bonus_parade"
+      ]
+    },
+    {
+      "id": "mot_dautorite",
+      "name": "Mot d'autorite",
+      "category": "social",
+      "description": "Presence et persuasion accrues.",
+      "difficulty": 3,
+      "primary_stats": [
+        "charisme",
+        "intelligence"
+      ],
+      "trainer_roles": [
+        "noble",
+        "marchand",
+        "officier"
+      ],
+      "effects": [
+        "bonus_persuasion"
+      ]
+    },
+    {
+      "id": "nova_runique",
+      "name": "Nova runique",
+      "category": "magie",
+      "description": "Explosion magique de zone.",
+      "difficulty": 5,
+      "primary_stats": [
+        "magie",
+        "intelligence"
+      ],
+      "trainer_roles": [
+        "archimage",
+        "mage"
+      ],
+      "effects": [
+        "sort_zone_avance"
+      ]
+    },
+    {
+      "id": "ombre_furtive",
+      "name": "Ombre furtive",
+      "category": "furtivite",
+      "description": "Infiltration avancee hors combat.",
+      "difficulty": 4,
+      "primary_stats": [
+        "agilite",
+        "chance"
+      ],
+      "trainer_roles": [
+        "assassin",
+        "rodeur",
+        "voleur"
+      ],
+      "effects": [
+        "furtivite_avancee"
+      ]
+    },
+    {
+      "id": "pas_silencieux",
+      "name": "Pas silencieux",
+      "category": "furtivite",
+      "description": "Deplacements plus discrets.",
+      "difficulty": 2,
+      "primary_stats": [
+        "agilite",
+        "dexterite"
+      ],
+      "trainer_roles": [
+        "rodeur",
+        "voleur",
+        "eclaireur"
+      ],
+      "effects": [
+        "bonus_furtivite"
+      ]
+    },
+    {
+      "id": "rage_controlee",
+      "name": "Rage controlee",
+      "category": "combat",
+      "description": "Boost physique sous pression.",
+      "difficulty": 4,
+      "primary_stats": [
+        "force",
+        "sagesse"
+      ],
+      "trainer_roles": [
+        "gladiateur",
+        "mercenaire"
+      ],
+      "effects": [
+        "bonus_force_temporaire"
+      ]
+    },
+    {
+      "id": "sceau_de_givre",
+      "name": "Sceau de givre",
+      "category": "magie",
+      "description": "Ralentit la cible un court instant.",
+      "difficulty": 3,
+      "primary_stats": [
+        "magie",
+        "sagesse"
+      ],
+      "trainer_roles": [
+        "mage",
+        "arcaniste"
+      ],
+      "effects": [
+        "controle_legere"
+      ]
+    },
+    {
+      "id": "soin_leger",
+      "name": "Soin leger",
+      "category": "magie_sacree",
+      "description": "Canalise un soin basique.",
+      "difficulty": 2,
+      "primary_stats": [
+        "sagesse",
+        "magie"
+      ],
+      "trainer_roles": [
+        "pretre",
+        "temple",
+        "soigneur"
+      ],
+      "effects": [
+        "sort_soin_novice"
+      ]
+    },
+    {
+      "id": "tir_instinctif",
+      "name": "Tir instinctif",
+      "category": "distance",
+      "description": "Tir rapide sur cible mobile.",
+      "difficulty": 3,
+      "primary_stats": [
+        "dexterite",
+        "agilite"
+      ],
+      "trainer_roles": [
+        "chasseur",
+        "rodeur",
+        "garde"
+      ],
+      "effects": [
+        "attaque_distance"
+      ]
+    },
+    {
+      "id": "volonte_implacable",
+      "name": "Volonte implacable",
+      "category": "mental",
+      "description": "Resiste mieux aux effets mentaux.",
+      "difficulty": 5,
+      "primary_stats": [
+        "sagesse",
+        "defense"
+      ],
+      "trainer_roles": [
+        "templier",
+        "pretre",
+        "maitre"
+      ],
+      "effects": [
+        "resistance_mentale"
+      ]
+    }
+  ]
+}

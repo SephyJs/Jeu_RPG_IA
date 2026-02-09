@@ -1,0 +1,7 @@
+{
+  "id": "pain_01",
+  "name": "Pain",
+  "stack_max": 16,
+  "type": "consumable",
+  "effects": [{ "kind": "heal", "value": 2 }]
+}

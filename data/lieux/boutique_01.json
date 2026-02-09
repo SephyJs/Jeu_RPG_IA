@@ -1,0 +1,9 @@
+{
+  "id": "boutique_01",
+  "title": "Boutique - Comptoir des voyageurs",
+  "narrator_text": "Ataryxia : Étagères serrées, fioles alignées, odeur de cuir neuf. La boutique semble petite, mais bien tenue.",
+  "npcs": ["Marchande", "Commis de boutique"],
+  "choices": [
+    { "id": "back", "label": "Retourner sur la place", "next_location_id": "village_center_01" }
+  ]
+}

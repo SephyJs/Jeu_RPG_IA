@@ -1,0 +1,9 @@
+{
+  "id": "forge_01",
+  "title": "Forge - Atelier de braise",
+  "narrator_text": "Ataryxia : Le marteau résonne contre l'enclume. L'air sent le charbon et l'acier chauffé.",
+  "npcs": ["Forgeron", "Apprenti forgeron"],
+  "choices": [
+    { "id": "back", "label": "Retourner sur la place", "next_location_id": "village_center_01" }
+  ]
+}

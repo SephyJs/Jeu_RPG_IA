@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables (keep template)
+.env
+.env.*
+!.env.example
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Runtime / local data
+*.log
+saves/
+
+# Generated content
+data/npcs/generated/
+data/dungeons/generated/
+
+# Local media/work artifacts
+mes_videos_brutes/
+mes_videos_coupees/
+jeu_2D.zip
+projet_complet.txt

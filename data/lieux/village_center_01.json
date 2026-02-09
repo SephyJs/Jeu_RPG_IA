@@ -1,0 +1,14 @@
+{
+  "id": "village_center_01",
+  "title": "Village - Place centrale",
+  "narrator_text": "Ataryxia : Vous êtes sur la place centrale de Lumeria. Les pavés luisent après la pluie et les voix se croisent autour de la fontaine.",
+  "npcs": ["Voyageuse", "Jeune villageois", "Vieux conteur", "Garde de ronde"],
+  "choices": [
+    { "id": "go_tavern", "label": "Aller à la taverne", "next_location_id": "taverne_01" },
+    { "id": "go_forge", "label": "Aller à la forge", "next_location_id": "forge_01" },
+    { "id": "go_shop", "label": "Aller à la boutique", "next_location_id": "boutique_01" },
+    { "id": "go_infirmary", "label": "Aller à l'infirmerie", "next_location_id": "infirmerie_01" },
+    { "id": "go_temple", "label": "Aller au temple", "next_location_id": "temple_01" },
+    { "id": "go_prison", "label": "Aller à la prison", "next_location_id": "prison_01" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "temple_01",
+  "title": "Temple - Nef silencieuse",
+  "narrator_text": "Ataryxia : La pierre est froide. Les runes murmurent dans l'air immobile.",
+  "npcs": ["Prêtresse", "Acolyte"],
+  "choices": [
+    { "id": "back", "label": "Retourner sur la place", "next_location_id": "village_center_01" }
+  ]
+}

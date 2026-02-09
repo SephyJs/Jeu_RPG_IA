@@ -1,0 +1,9 @@
+{
+  "id": "taverne_01",
+  "title": "Taverne - Salle principale",
+  "narrator_text": "Ataryxia : Chaleur, rires et chopes. Un barde gratte des accords au fond.",
+  "npcs": ["Aubergiste", "Serveuse", "Barde"],
+  "choices": [
+    { "id": "back", "label": "Retourner sur la place", "next_location_id": "village_center_01" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "prison_01",
+  "title": "Prison - Couloir humide",
+  "narrator_text": "Ataryxia : Odeur de fer et d'humidité. Des chaînes grincent au loin.",
+  "npcs": ["Geôlier"],
+  "choices": [
+    { "id": "back", "label": "Retourner sur la place", "next_location_id": "village_center_01" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "enabled": false,
+  "temperature": 0.7,
+  "top_p": 0.9,
+  "sensitivity": 0.5
+}

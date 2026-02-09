@@ -1,0 +1,6 @@
+Rappel - taches restantes
+
+- Tester le jeu sur navigateur
+- Retester le jeu sur Android apres correctifs UI mobile (scroll, volets retractables, boutons compacts)
+- Tester la page `/prototype-2d` sur navigateur et Android
+- Creer une page autre que /game pour visionner les PNJ crees et avoir la possibilite de les modifier

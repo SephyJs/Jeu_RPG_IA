@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "default_seed": null,
+  "candidates": [
+    { "location_id": "temple_01", "weight": 3 },
+    { "location_id": "taverne_01", "weight": 2 },
+    { "location_id": "village_center_01", "weight": 4 },
+    { "location_id": "prison_01", "weight": 1 }
+  ]
+}

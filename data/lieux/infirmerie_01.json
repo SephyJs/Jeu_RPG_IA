@@ -1,0 +1,9 @@
+{
+  "id": "infirmerie_01",
+  "title": "Infirmerie - Salle des onguents",
+  "narrator_text": "Ataryxia : Les herbes sèchent au plafond et les onguents chauffent à feu doux. On y parle bas, comme dans un sanctuaire.",
+  "npcs": ["Guérisseuse"],
+  "choices": [
+    { "id": "back", "label": "Retourner sur la place", "next_location_id": "village_center_01" }
+  ]
+}
