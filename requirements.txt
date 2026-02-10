@@ -3,6 +3,7 @@ nicegui==3.7.1
 pydantic==2.12.5
 httpx==0.28.1
 python-dotenv==1.2.1
+python-telegram-bot==21.11.1
 
 # Outils video (tools/smooth_video.py)
 moviepy==2.2.1

@@ -44,6 +44,32 @@ python3 -m app.main
 
 Puis ouvrir: `http://127.0.0.1:8080`
 
+## Mode Telegram (MVP)
+
+Le projet inclut un bot Telegram minimal pour discuter avec le jeu depuis l'app Telegram.
+
+### 1) Configuration
+Dans `.env`:
+```bash
+TELEGRAM_BOT_TOKEN=ton_token_botfather
+TELEGRAM_DEFAULT_SLOT=1
+TELEGRAM_SLOT_COUNT=3
+```
+
+### 2) Lancer le bot
+```bash
+python3 -m app.telegram.bot
+```
+
+### 3) Boutons minimaux
+- `👥 PNJ`: choisir le PNJ actif du lieu courant
+- `🧭 Deplacer`: ouvrir la liste des trajets disponibles depuis le lieu courant
+- `📍 Statut`: afficher lieu, PNJ actif, or, niveau, heure du monde
+- `💾 Sauver`: sauvegarde immediate
+
+Le bot accepte aussi du texte libre pour dialoguer avec le PNJ actif et propose des boutons inline
+`Confirmer/Annuler` quand une transaction est en attente.
+
 ## Documentation
 - Guide complet: `README.txt`
 - Cartes/tiles: `assets/maps/README.txt`
