@@ -18,7 +18,12 @@ from app.gamemaster.conversation_memory import (
 from app.gamemaster.economy_manager import EconomyManager
 from app.gamemaster.gamemaster import GameMaster
 from app.gamemaster.location_manager import LocationManager, is_building_scene_title, scene_open_status
-from app.gamemaster.npc_manager import NPCProfileManager, npc_profile_key, profile_summary_line
+from app.gamemaster.npc_manager import (
+    NPCProfileManager,
+    npc_profile_key,
+    profile_display_name,
+    profile_summary_line,
+)
 from app.gamemaster.ollama_client import OllamaClient
 from app.gamemaster.player_sheet_manager import PlayerSheetManager
 from app.gamemaster.world_time import format_fantasy_datetime
@@ -69,13 +74,21 @@ class TelegramGameSession:
 
         if loaded:
             self._refresh_static_scenes_from_data()
+            self._ensure_player_sheet_ready()
+            self._inject_creation_intro_once()
         else:
             self._ensure_player_sheet_ready()
+            self._inject_creation_intro_once()
             self._sync_gm_state()
             self.save()
 
         self._ensure_selected_npc()
         self._sync_gm_state()
+
+    def short_status_line(self) -> str:
+        if self.state is None:
+            return "Session non initialisee."
+        return f"Profil={self.profile_key} | Slot={self.slot} | Lieu={self.state.current_scene().title}"
 
     def save(self) -> None:
         if self.state is None:
@@ -213,6 +226,7 @@ class TelegramGameSession:
         return "\n".join(
             [
                 f"Profil: {self.profile_name}",
+                f"Profil ID: {self.profile_key}",
                 f"Slot: {self.slot}",
                 f"Lieu: {scene.title}",
                 f"PNJ actif: {npc}",
@@ -220,6 +234,7 @@ class TelegramGameSession:
                 f"Niveau: {level} | Competences: {skill_count}",
                 f"Arme equipee: {weapon}",
                 f"Temps du monde: {format_fantasy_datetime(self.state.world_time_minutes)}",
+                f"Creation joueur: {'OK' if self.state.player_sheet_ready else 'incomplete'}",
             ]
         )
 
@@ -276,11 +291,18 @@ class TelegramGameSession:
 
         self.state.selected_npc = target
         npc_key, profile = await self._ensure_selected_npc_profile()
+        first_contact_line = self._consume_first_contact_line(target, profile)
         self._sync_gm_state(selected_npc=target, selected_npc_key=npc_key, selected_profile=profile)
         self.save()
 
         if isinstance(profile, dict):
-            return f"PNJ actif: {profile_summary_line(profile, target)}"
+            summary = f"PNJ actif: {profile_summary_line(profile, target)}"
+            if first_contact_line:
+                speaker = profile_display_name(profile, target)
+                self.state.push(speaker, first_contact_line, count_for_media=False)
+                self.save()
+                return f"{summary}\n{speaker}: {first_contact_line}"
+            return summary
         return f"PNJ actif: {target}"
 
     async def confirm_pending_trade(self) -> TurnOutput:
@@ -296,6 +318,75 @@ class TelegramGameSession:
             return TurnOutput(text="Aucune transaction en attente.", has_pending_trade=False)
         return await self.process_user_message("annuler")
 
+    def creation_status_text(self) -> str:
+        if self.state is None:
+            return "Session non initialisee."
+        missing = self.state.player_sheet_missing if isinstance(self.state.player_sheet_missing, list) else []
+        if self.state.player_sheet_ready:
+            return "Fiche joueur complete."
+        next_q = self._player_sheet_manager.next_creation_question(missing)
+        labels = self._player_sheet_manager.creation_missing_labels()
+        missing_labels = ", ".join(labels.get(str(k), str(k)) for k in missing[:5]) if missing else "inconnu"
+        return (
+            "Creation personnage incomplete.\n"
+            f"Champs manquants: {missing_labels}\n"
+            f"Question: {next_q}"
+        )
+
+    async def process_creation_message(self, text: str) -> TurnOutput:
+        if self.state is None:
+            return TurnOutput(text="Session non initialisee.", has_pending_trade=False)
+
+        user_text = str(text or "").strip()
+        if not user_text:
+            return TurnOutput(text=self.creation_status_text(), has_pending_trade=False)
+        if self.state.player_sheet_generation_in_progress:
+            return TurnOutput(text="Creation en cours, reessaie dans un instant.", has_pending_trade=False)
+
+        self.state.player_sheet_generation_in_progress = True
+        self.state.push("Joueur", user_text)
+        lines: list[str] = []
+        try:
+            recent = [f"{msg.speaker}: {msg.text}" for msg in self.state.chat[-20:]]
+            result = await self._player_sheet_manager.ingest_creation_message(
+                sheet=self.state.player_sheet if isinstance(self.state.player_sheet, dict) else {},
+                user_message=user_text,
+                recent_chat_lines=recent,
+            )
+            new_sheet = result.get("sheet")
+            self.state.player_sheet = new_sheet if isinstance(new_sheet, dict) else self.state.player_sheet
+            self._ensure_player_sheet_ready()
+
+            ack = str(result.get("ack_text") or "").strip()
+            if ack:
+                self.state.push("Systeme", ack, count_for_media=False)
+                lines.append(f"Systeme: {ack}")
+
+            if self.state.player_sheet_ready:
+                done_lines = [
+                    "Fiche joueur creee. Les dialogues complets sont maintenant actifs.",
+                    "Tu debutes sans sort avance: entraine-toi avec les PNJ pour progresser.",
+                    "Parfait. Maintenant, avance.",
+                ]
+                for line in done_lines:
+                    self.state.push("Systeme", line, count_for_media=False)
+                    lines.append(f"Systeme: {line}")
+            else:
+                next_q = str(result.get("next_question") or "").strip()
+                if next_q:
+                    self.state.push("Systeme", next_q, count_for_media=False)
+                    lines.append(f"Systeme: {next_q}")
+        except Exception as e:
+            err = f"Impossible de mettre a jour la fiche joueur: {e}"
+            self.state.push("Systeme", err, count_for_media=False)
+            lines.append(f"Systeme: {err}")
+        finally:
+            self.state.player_sheet_generation_in_progress = False
+
+        self._sync_gm_state()
+        self.save()
+        return TurnOutput(text="\n".join(lines) if lines else self.creation_status_text(), has_pending_trade=False)
+
     async def process_user_message(self, text: str) -> TurnOutput:
         if self.state is None:
             return TurnOutput(text="Session non initialisee.", has_pending_trade=False)
@@ -304,6 +395,9 @@ class TelegramGameSession:
         if not user_text:
             return TurnOutput(text="Message vide.", has_pending_trade=bool(self.pending_trade()))
 
+        if not self.state.player_sheet_ready:
+            return await self.process_creation_message(user_text)
+
         self._ensure_selected_npc()
         npc = str(self.state.selected_npc or "").strip()
         if not npc:
@@ -311,6 +405,7 @@ class TelegramGameSession:
 
         scene = self.state.current_scene()
         npc_key, npc_profile = await self._ensure_selected_npc_profile()
+        first_contact_line = self._consume_first_contact_line(npc, npc_profile)
         self._sync_gm_state(selected_npc=npc, selected_npc_key=npc_key, selected_profile=npc_profile)
 
         self.state.push("Joueur", user_text)
@@ -329,22 +424,27 @@ class TelegramGameSession:
 
         lines: list[str] = []
 
+        if first_contact_line and isinstance(npc_profile, dict):
+            speaker = profile_display_name(npc_profile, npc)
+            self.state.push(speaker, first_contact_line, count_for_media=False)
+            lines.append(f"{speaker}: {first_contact_line}")
+
         for line in trade_lines:
             self.state.push("Systeme", line, count_for_media=False)
-            lines.append(f"Systeme: {line}")
+            self._append_unique_line(lines, f"Systeme: {line}")
 
         if res.system:
             self.state.push("Systeme", str(res.system), count_for_media=False)
-            lines.append(f"Systeme: {res.system}")
+            self._append_unique_line(lines, f"Systeme: {res.system}")
 
         if res.dialogue and res.speaker:
             self.state.push(str(res.speaker), str(res.dialogue))
-            lines.append(f"{res.speaker}: {res.dialogue}")
+            self._append_unique_line(lines, f"{res.speaker}: {res.dialogue}")
 
         if res.narration:
             self.state.current_scene().narrator_text = str(res.narration)
             if not (res.dialogue and res.speaker):
-                lines.append(f"Narration: {res.narration}")
+                self._append_unique_line(lines, f"Narration: {res.narration}")
 
         try:
             remember_dialogue_turn(
@@ -438,8 +538,24 @@ class TelegramGameSession:
             target.player_sheet = self._player_sheet_manager.ensure_sheet(target.player_sheet, fallback_name=profile_name)
 
         self._player_sheet_manager.sync_player_basics(target.player_sheet, target.player)
-        target.player_sheet_missing = []
-        target.player_sheet_ready = True
+        target.player_sheet_missing = self._player_sheet_manager.missing_creation_fields(target.player_sheet)
+        target.player_sheet_ready = not bool(target.player_sheet_missing)
+
+    def _inject_creation_intro_once(self) -> None:
+        if self.state is None or self.state.player_sheet_ready:
+            return
+        if len(self.state.chat) > 0:
+            return
+        self.state.push(
+            "Systeme",
+            "Avant de commencer: presente ton personnage (pseudo, genre, apparence, atouts).",
+            count_for_media=False,
+        )
+        self.state.push(
+            "Ataryxia",
+            "Je dois savoir qui tu es avant d'ouvrir les routes et les rencontres.",
+            count_for_media=False,
+        )
 
     def _ensure_selected_npc(self) -> None:
         if self.state is None:
@@ -467,6 +583,11 @@ class TelegramGameSession:
         if isinstance(profile, dict):
             return key, profile
 
+        reused = self._find_existing_profile_for_scene(npc, scene.id)
+        if isinstance(reused, dict):
+            self.state.npc_profiles[key] = reused
+            return key, reused
+
         try:
             profile = await self._npc_store.ensure_profile(
                 self.state.npc_profiles,
@@ -480,6 +601,45 @@ class TelegramGameSession:
         except Exception:
             return key, None
         return key, None
+
+    def _find_existing_profile_for_scene(self, npc_name: str, scene_id: str) -> dict | None:
+        if self.state is None:
+            return None
+        target_npc = self._norm_text(npc_name)
+        target_scene = self._norm_text(scene_id)
+        if not target_npc:
+            return None
+
+        for maybe_profile in self.state.npc_profiles.values():
+            if not isinstance(maybe_profile, dict):
+                continue
+            label = self._norm_text(maybe_profile.get("label"))
+            if label and label != target_npc:
+                continue
+            world_anchor = maybe_profile.get("world_anchor") if isinstance(maybe_profile.get("world_anchor"), dict) else {}
+            location_id = self._norm_text(world_anchor.get("location_id"))
+            if target_scene and location_id and location_id != target_scene:
+                continue
+            return maybe_profile
+        return None
+
+    def _consume_first_contact_line(self, npc_name: str, profile: dict | None) -> str:
+        if self.state is None or not isinstance(profile, dict):
+            return ""
+        flags = profile.get("dynamic_flags")
+        if not isinstance(flags, dict):
+            flags = {}
+            profile["dynamic_flags"] = flags
+        if bool(flags.get("is_met", False)):
+            return ""
+
+        first_message = str(profile.get("first_message") or "").strip()
+        flags["is_met"] = True
+        try:
+            self._npc_store.save_profile(npc_name, profile, location_id=self.state.current_scene().id)
+        except Exception:
+            pass
+        return first_message
 
     def _sync_gm_state(
         self,
@@ -660,6 +820,20 @@ class TelegramGameSession:
             return "intermediaire"
         return "avance"
 
+    def _append_unique_line(self, lines: list[str], line: str) -> None:
+        text = str(line or "").strip()
+        if not text:
+            return
+        if lines and lines[-1] == text:
+            return
+        lines.append(text)
+
+    def _norm_text(self, value: object) -> str:
+        text = "".join(ch.lower() if ch.isalnum() else "_" for ch in str(value or "").strip())
+        while "__" in text:
+            text = text.replace("__", "_")
+        return text.strip("_")
+
     def _safe_int(self, value: object, default: int = 0) -> int:
         try:
             return int(value)
@@ -668,10 +842,24 @@ class TelegramGameSession:
 
 
 class TelegramSessionManager:
-    def __init__(self, *, data_dir: str = "data", slot_count: int = 3, default_slot: int = 1) -> None:
+    def __init__(
+        self,
+        *,
+        data_dir: str = "data",
+        slot_count: int = 3,
+        default_slot: int = 1,
+        shared_profile_key: str | None = None,
+        shared_profile_name: str | None = None,
+    ) -> None:
         self.data_dir = data_dir
         self.default_slot = max(1, int(default_slot))
         self.save_manager = SaveManager(slot_count=max(1, int(slot_count)))
+        self.shared_profile_key = (
+            self.save_manager.normalize_profile_id(shared_profile_key)
+            if str(shared_profile_key or "").strip()
+            else None
+        )
+        self.shared_profile_name = str(shared_profile_name or "").strip()[:80]
         self._sessions: dict[int, TelegramGameSession] = {}
 
     async def get_session(self, *, chat_id: int, display_name: str = "") -> TelegramGameSession:
@@ -679,8 +867,7 @@ class TelegramSessionManager:
         if existing is not None:
             return existing
 
-        profile_name = str(display_name or f"Telegram-{chat_id}").strip()[:80] or f"Telegram-{chat_id}"
-        profile_key = self.save_manager.normalize_profile_id(f"telegram_{chat_id}")
+        profile_key, profile_name = self._resolve_profile(chat_id=chat_id, display_name=display_name)
 
         session = TelegramGameSession(
             chat_id=int(chat_id),
@@ -693,3 +880,58 @@ class TelegramSessionManager:
         await session.load_or_create()
         self._sessions[int(chat_id)] = session
         return session
+
+    async def switch_profile(self, *, chat_id: int, display_name: str, profile_key: str) -> TelegramGameSession:
+        chosen_key = self.save_manager.normalize_profile_id(profile_key)
+        chosen_name = self._display_name_for_profile(chosen_key) or display_name or chosen_key
+        previous = self._sessions.get(int(chat_id))
+        chosen_slot = previous.slot if isinstance(previous, TelegramGameSession) else self.default_slot
+
+        session = TelegramGameSession(
+            chat_id=int(chat_id),
+            profile_key=chosen_key,
+            profile_name=str(chosen_name).strip()[:80] or chosen_key,
+            slot=self._clamp_slot(chosen_slot),
+            save_manager=self.save_manager,
+            data_dir=self.data_dir,
+        )
+        await session.load_or_create()
+        self._sessions[int(chat_id)] = session
+        return session
+
+    async def switch_slot(self, *, chat_id: int, display_name: str, slot: int) -> TelegramGameSession:
+        session = await self.get_session(chat_id=chat_id, display_name=display_name)
+        session.slot = self._clamp_slot(slot)
+        await session.load_or_create()
+        self._sessions[int(chat_id)] = session
+        return session
+
+    def list_profiles(self) -> list[dict]:
+        return self.save_manager.list_profiles()
+
+    def _resolve_profile(self, *, chat_id: int, display_name: str) -> tuple[str, str]:
+        fallback_name = str(display_name or f"Telegram-{chat_id}").strip()[:80] or f"Telegram-{chat_id}"
+
+        if self.shared_profile_key:
+            profile_name = self.shared_profile_name or self._display_name_for_profile(self.shared_profile_key) or fallback_name
+            return self.shared_profile_key, profile_name
+
+        return self.save_manager.normalize_profile_id(f"telegram_{chat_id}"), fallback_name
+
+    def _display_name_for_profile(self, profile_key: str) -> str:
+        target = self.save_manager.normalize_profile_id(profile_key)
+        for row in self.save_manager.list_profiles():
+            key = self.save_manager.normalize_profile_id(str(row.get("profile_key") or ""))
+            if key != target:
+                continue
+            return str(row.get("display_name") or "").strip()[:80]
+        return ""
+
+    def _clamp_slot(self, slot: int) -> int:
+        raw = int(slot)
+        if raw < 1:
+            return 1
+        max_slot = max(1, int(self.save_manager.slot_count))
+        if raw > max_slot:
+            return max_slot
+        return raw

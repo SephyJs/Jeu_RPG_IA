@@ -54,6 +54,8 @@ Dans `.env`:
 TELEGRAM_BOT_TOKEN=ton_token_botfather
 TELEGRAM_DEFAULT_SLOT=1
 TELEGRAM_SLOT_COUNT=3
+TELEGRAM_PROFILE_KEY=
+TELEGRAM_PROFILE_NAME=
 ```
 
 ### 2) Lancer le bot
@@ -69,6 +71,14 @@ python3 -m app.telegram.bot
 
 Le bot accepte aussi du texte libre pour dialoguer avec le PNJ actif et propose des boutons inline
 `Confirmer/Annuler` quand une transaction est en attente.
+
+### 4) Reprendre une partie existante
+- `TELEGRAM_PROFILE_KEY=sephy` permet d'utiliser la meme sauvegarde que l'UI web.
+- Commandes utiles dans Telegram:
+  - `/profiles` liste les profils detectes
+  - `/useprofile <profil_key>` bascule de profil
+  - `/slot <n>` change de slot actif
+  - `/creation` affiche l'etat de creation du personnage
 
 ## Documentation
 - Guide complet: `README.txt`

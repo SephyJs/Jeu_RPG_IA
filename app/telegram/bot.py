@@ -85,18 +85,26 @@ def _manager(context: ContextTypes.DEFAULT_TYPE) -> TelegramSessionManager:
     raise RuntimeError("Telegram session manager indisponible.")
 
 
-async def _session_from_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> TelegramGameSession:
+def _display_name_from_update(update: Update) -> str:
     chat = update.effective_chat
     user = update.effective_user
     if chat is None:
-        raise RuntimeError("Chat Telegram introuvable.")
-
+        return ""
     display_name = ""
     if user is not None:
         parts = [str(user.first_name or "").strip(), str(user.last_name or "").strip()]
         display_name = " ".join(p for p in parts if p).strip() or str(user.username or "").strip()
     if not display_name:
         display_name = f"Telegram-{chat.id}"
+    return display_name
+
+
+async def _session_from_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> TelegramGameSession:
+    chat = update.effective_chat
+    if chat is None:
+        raise RuntimeError("Chat Telegram introuvable.")
+
+    display_name = _display_name_from_update(update)
 
     return await _manager(context).get_session(chat_id=int(chat.id), display_name=display_name)
 
@@ -123,13 +131,17 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     async with session.lock:
         session.save()
         status = session.status_text()
+        creation = session.creation_status_text() if not (session.state and session.state.player_sheet_ready) else ""
 
     await message.reply_text(
         "Ataryxia Telegram connecte. Ecris un message pour parler au PNJ actif."
-        "\nBoutons: PNJ, Deplacer, Statut, Sauver.",
+        "\nBoutons: PNJ, Deplacer, Statut, Sauver."
+        "\nCommandes utiles: /creation, /profiles, /useprofile, /slot.",
         reply_markup=_main_keyboard(),
     )
     await message.reply_text(status, reply_markup=_main_keyboard())
+    if creation:
+        await message.reply_text(creation, reply_markup=_main_keyboard())
 
 
 async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -161,6 +173,93 @@ async def cmd_npcs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     session = await _session_from_update(update, context)
     await message.reply_text("Choisis le PNJ actif:", reply_markup=_npc_keyboard(session))
+
+
+async def cmd_creation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    if message is None:
+        return
+
+    session = await _session_from_update(update, context)
+    async with session.lock:
+        text = session.creation_status_text()
+    await message.reply_text(text, reply_markup=_main_keyboard())
+
+
+async def cmd_profiles(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    if message is None:
+        return
+
+    manager = _manager(context)
+    profiles = manager.list_profiles()
+    if not profiles:
+        await message.reply_text("Aucun profil de sauvegarde detecte.", reply_markup=_main_keyboard())
+        return
+
+    lines = ["Profils disponibles:"]
+    for row in profiles[:12]:
+        key = str(row.get("profile_key") or "").strip()
+        name = str(row.get("display_name") or key).strip() or key
+        lines.append(f"- {key} ({name})")
+    lines.append("Utilise /useprofile <profil_key> pour basculer.")
+    await message.reply_text("\n".join(lines), reply_markup=_main_keyboard())
+
+
+async def cmd_useprofile(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    chat = update.effective_chat
+    if message is None or chat is None:
+        return
+
+    args = list(context.args or [])
+    if not args:
+        await message.reply_text("Usage: /useprofile <profil_key>", reply_markup=_main_keyboard())
+        return
+
+    manager = _manager(context)
+    display_name = _display_name_from_update(update)
+    session = await manager.switch_profile(
+        chat_id=int(chat.id),
+        display_name=display_name,
+        profile_key=str(args[0]),
+    )
+    async with session.lock:
+        status = session.status_text()
+        creation = session.creation_status_text() if not (session.state and session.state.player_sheet_ready) else ""
+    txt = f"Profil actif change: {session.profile_key}\n{status}"
+    if creation:
+        txt += f"\n\n{creation}"
+    await message.reply_text(txt, reply_markup=_main_keyboard())
+
+
+async def cmd_slot(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    chat = update.effective_chat
+    if message is None or chat is None:
+        return
+
+    args = list(context.args or [])
+    if not args:
+        await message.reply_text("Usage: /slot <numero>", reply_markup=_main_keyboard())
+        return
+
+    try:
+        slot = int(str(args[0]).strip())
+    except ValueError:
+        await message.reply_text("Slot invalide. Exemple: /slot 1", reply_markup=_main_keyboard())
+        return
+
+    manager = _manager(context)
+    display_name = _display_name_from_update(update)
+    session = await manager.switch_slot(chat_id=int(chat.id), display_name=display_name, slot=slot)
+    async with session.lock:
+        status = session.status_text()
+        creation = session.creation_status_text() if not (session.state and session.state.player_sheet_ready) else ""
+    txt = f"Slot actif: {session.slot}\n{status}"
+    if creation:
+        txt += f"\n\n{creation}"
+    await message.reply_text(txt, reply_markup=_main_keyboard())
 
 
 async def cmd_move(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -287,7 +386,14 @@ async def on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 def build_application(token: str) -> Application:
     slot_count = int(os.getenv("TELEGRAM_SLOT_COUNT", "3") or "3")
     default_slot = int(os.getenv("TELEGRAM_DEFAULT_SLOT", "1") or "1")
-    manager = TelegramSessionManager(slot_count=slot_count, default_slot=default_slot)
+    shared_profile_key = str(os.getenv("TELEGRAM_PROFILE_KEY") or "").strip()
+    shared_profile_name = str(os.getenv("TELEGRAM_PROFILE_NAME") or "").strip()
+    manager = TelegramSessionManager(
+        slot_count=slot_count,
+        default_slot=default_slot,
+        shared_profile_key=shared_profile_key or None,
+        shared_profile_name=shared_profile_name or None,
+    )
 
     app = Application.builder().token(token).build()
     app.bot_data["telegram_session_manager"] = manager
@@ -297,6 +403,10 @@ def build_application(token: str) -> Application:
     app.add_handler(CommandHandler("save", cmd_save))
     app.add_handler(CommandHandler("npcs", cmd_npcs))
     app.add_handler(CommandHandler("move", cmd_move))
+    app.add_handler(CommandHandler("creation", cmd_creation))
+    app.add_handler(CommandHandler("profiles", cmd_profiles))
+    app.add_handler(CommandHandler("useprofile", cmd_useprofile))
+    app.add_handler(CommandHandler("slot", cmd_slot))
 
     app.add_handler(CallbackQueryHandler(on_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
