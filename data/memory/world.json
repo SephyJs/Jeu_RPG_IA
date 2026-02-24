@@ -1,0 +1,40 @@
+{
+  "schema_version": 2,
+  "short": [],
+  "long": {
+    "facts": [],
+    "events": [
+      {
+        "id": "56d60db2-f50a-4ad4-ae66-1f79fa682868",
+        "ts": "2026-02-24T16:57:06.065900+00:00",
+        "text": "Narration système: Un messager essoufflé interrompt brièvement l'échange.",
+        "impact": "med",
+        "tags": [
+          "system"
+        ],
+        "importance": 0.6,
+        "text_hash": "ed33060ce49fec4a9212c30f2e7aa7f7890adcc0"
+      }
+    ],
+    "promises": [],
+    "debts": [],
+    "relationships": {
+      "player": {
+        "affinity": 0,
+        "notes": []
+      }
+    },
+    "summary": {
+      "ts": "2026-02-24T16:57:06.065930+00:00",
+      "text": "Narration système: Un messager essoufflé interrompt brièvement l'échange."
+    }
+  },
+  "chunks": [],
+  "world_flags": {},
+  "discovered_locations": [],
+  "stats": {
+    "short_max": 60,
+    "chunk_target_turns": 40,
+    "last_compact_ts": ""
+  }
+}

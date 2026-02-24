@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Ambiance generale et systeme"
+  },
+  "entries": {
+    "narration.ambience.generic_continue": [
+      "Continue. Le monde reagit a chacun de tes choix."
+    ],
+    "narration.ambience.dungeon_recovery": [
+      "Des survivants vous arrachent au carnage et vous trainent hors du donjon."
+    ],
+    "narration.ambience.dungeon_recovery_hp": [
+      "Retour en morceaux, recousu a la hate: {hp}/{max_hp} PV."
+    ]
+  }
+}

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.ui.state.game_state import Scene, Choice
+from app.core.models import Choice, Scene
 
 
 class DataError(RuntimeError):
@@ -24,6 +25,10 @@ class DataManager:
         self.data_dir = Path(data_dir)
         self.lieux_dir = self.data_dir / "lieux"
         self.starting_points_path = self.data_dir / "starting_points.json"
+        self._starting_points_cache_key: tuple[int, int] | None = None
+        self._starting_points_cache_value: tuple[Optional[int], List[StartingPointCandidate]] | None = None
+        self._scenes_cache_key: tuple[tuple[str, int, int], ...] | None = None
+        self._scenes_cache_value: Dict[str, Scene] | None = None
 
     # ---------- JSON helpers ----------
     def _read_json(self, path: Path) -> Dict[str, Any]:
@@ -34,8 +39,30 @@ class DataManager:
         except json.JSONDecodeError as e:
             raise DataError(f"JSON invalide dans {path.as_posix()} : {e}") from e
 
+    def _starting_points_stamp(self) -> tuple[int, int]:
+        stat = self.starting_points_path.stat()
+        return int(stat.st_mtime_ns), int(stat.st_size)
+
+    def _locations_stamp(self) -> tuple[tuple[str, int, int], ...]:
+        files = sorted(self.lieux_dir.glob("*.json"))
+        rows: list[tuple[str, int, int]] = []
+        for path in files:
+            stat = path.stat()
+            rows.append((path.name, int(stat.st_mtime_ns), int(stat.st_size)))
+        return tuple(rows)
+
     # ---------- Starting points ----------
     def load_starting_points(self) -> Tuple[Optional[int], List[StartingPointCandidate]]:
+        cache_key: tuple[int, int] | None = None
+        if self.starting_points_path.exists():
+            cache_key = self._starting_points_stamp()
+            if (
+                cache_key == self._starting_points_cache_key
+                and isinstance(self._starting_points_cache_value, tuple)
+            ):
+                default_seed, candidates = self._starting_points_cache_value
+                return default_seed, deepcopy(candidates)
+
         data = self._read_json(self.starting_points_path)
 
         if data.get("version") != 1:
@@ -61,6 +88,10 @@ class DataManager:
                 raise DataError("starting_points.json: 'weight' doit être un entier > 0")
             candidates.append(StartingPointCandidate(location_id=loc, weight=w))
 
+        if cache_key is None:
+            cache_key = self._starting_points_stamp()
+        self._starting_points_cache_key = cache_key
+        self._starting_points_cache_value = (default_seed, deepcopy(candidates))
         return default_seed, candidates
 
     def choose_start_location_id(self, seed: Optional[int] = None) -> str:
@@ -126,10 +157,17 @@ class DataManager:
         if not self.lieux_dir.exists():
             raise DataError(f"Dossier introuvable: {self.lieux_dir.as_posix()}")
 
+        cache_key = self._locations_stamp()
+        if cache_key == self._scenes_cache_key and isinstance(self._scenes_cache_value, dict):
+            return deepcopy(self._scenes_cache_value)
+
         scenes: Dict[str, Scene] = {}
         for p in sorted(self.lieux_dir.glob("*.json")):
             loc_id = p.stem
             scenes[loc_id] = self.load_location_scene(loc_id)
         if not scenes:
             raise DataError("Aucun lieu trouvé dans data/lieux/*.json")
+
+        self._scenes_cache_key = cache_key
+        self._scenes_cache_value = deepcopy(scenes)
         return scenes

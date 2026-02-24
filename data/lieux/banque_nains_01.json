@@ -1,0 +1,7 @@
+{
+  "id": "banque_nains_01",
+  "title": "Banque des nains - Salle des coffres",
+  "narrator_text": "Ataryxia : Serrures d'acier, runes de protection et comptables inflexibles protègent la fortune de la cite.",
+  "npcs": ["Banquier nain", "Garde du coffre", "Comptable"],
+  "choices": []
+}

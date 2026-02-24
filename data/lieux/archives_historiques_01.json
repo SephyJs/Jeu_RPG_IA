@@ -1,0 +1,7 @@
+{
+  "id": "archives_historiques_01",
+  "title": "Archives historiques - Bibliotheque des traites",
+  "narrator_text": "Ataryxia : D'interminables rayonnages gardent memoire des lignages, guerres et serments.",
+  "npcs": ["Archiviste", "Historienne", "Copiste"],
+  "choices": []
+}

@@ -1,6 +1,8 @@
 from nicegui import app, ui
-from app.ui.pages.game_page import game_page
-from app.ui.pages.prototype_2d_page import prototype_2d_page
+from app.ui.pages.game_page import game_page as game_page  # noqa: F401
+from app.ui.pages.memory_admin_page import memory_admin_page as memory_admin_page  # noqa: F401
+from app.ui.pages.prototype_2d_page import prototype_2d_page as prototype_2d_page  # noqa: F401
+from app.ui.pages.studio_page import studio_page as studio_page  # noqa: F401
 
 
 app.add_static_files('/assets', 'assets')  # dossier local ./assets

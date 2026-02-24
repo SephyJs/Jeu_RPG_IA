@@ -1,0 +1,7 @@
+{
+  "id": "hospice_01",
+  "title": "Hospice - Salle des soins",
+  "narrator_text": "Ataryxia : Des clercs et medecins pansent les blesses dans une odeur d'onguent chaud.",
+  "npcs": ["Clerc soignant", "Medecin", "Blessé"],
+  "choices": []
+}

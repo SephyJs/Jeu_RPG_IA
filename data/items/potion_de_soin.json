@@ -1,0 +1,17 @@
+{
+  "id": "potion_de_soin",
+  "name": "potion de soin",
+  "stack_max": 6,
+  "type": "consumable",
+  "slot": "",
+  "rarity": "rare",
+  "description": "Trouve dans le donjon: potion de soin.",
+  "stat_bonuses": {},
+  "effects": [
+    {
+      "kind": "heal",
+      "value": 7
+    }
+  ],
+  "value_gold": 12
+}

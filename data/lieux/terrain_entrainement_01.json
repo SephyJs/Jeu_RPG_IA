@@ -1,0 +1,7 @@
+{
+  "id": "terrain_entrainement_01",
+  "title": "Terrain d'entrainement - Cour des lances",
+  "narrator_text": "Ataryxia : Cibles trouees, mannequins fendus et cris d'effort remplissent la cour.",
+  "npcs": ["Instructeur", "Archer novice", "Lancier"],
+  "choices": []
+}

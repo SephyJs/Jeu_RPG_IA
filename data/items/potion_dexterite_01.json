@@ -1,0 +1,19 @@
+{
+  "id": "potion_dexterite_01",
+  "name": "Potion de dexterite",
+  "stack_max": 8,
+  "type": "consumable",
+  "slot": "",
+  "rarity": "uncommon",
+  "description": "Ameliore la precision et la finesse des mouvements.",
+  "stat_bonuses": {},
+  "effects": [
+    {
+      "kind": "stat_buff",
+      "stat": "dexterite",
+      "value": 2,
+      "duration_turns": 3
+    }
+  ],
+  "value_gold": 18
+}

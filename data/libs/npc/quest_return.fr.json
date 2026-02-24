@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Retour de quete"
+  },
+  "entries": {
+    "npc.quest.return.success": [
+      "Beau travail, {player}.",
+      "Tu as tenu parole, {player}.",
+      "Excellent resultat, mission completee."
+    ],
+    "npc.quest.return.partial": [
+      "C'est un debut, mais il reste du travail.",
+      "Tu avances bien, continue."
+    ]
+  }
+}

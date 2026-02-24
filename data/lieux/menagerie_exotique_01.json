@@ -1,0 +1,7 @@
+{
+  "id": "menagerie_exotique_01",
+  "title": "Menagerie exotique - Hall des creatures",
+  "narrator_text": "Ataryxia : Cris et souffles inconnus resonnent derriere les grilles runiques.",
+  "npcs": ["Gardien de menagerie", "Savant bestiaire"],
+  "choices": []
+}

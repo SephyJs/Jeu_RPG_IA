@@ -1,0 +1,438 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Messages systeme non-erreur"
+  },
+  "entries": {
+    "system.start.title": [
+      "Ataryxia Telegram simplifie."
+    ],
+    "system.start.current_mode": [
+      "Mode actuel: {mode}"
+    ],
+    "system.start.quick_choice": [
+      "Choix rapide: bouton Donjon / Ataryxia."
+    ],
+    "system.save.done": [
+      "Sauvegarde effectuee."
+    ],
+    "system.mode.ataryxia_active": [
+      "Mode Ataryxia actif.\nIci tu discutes uniquement avec Ataryxia (IA conversationnelle)."
+    ],
+    "system.mode.dungeon_active": [
+      "Mode Donjon actif: utilise les boutons d'action."
+    ],
+    "system.trade.none_pending": [
+      "Aucune transaction en attente."
+    ],
+    "system.session.not_initialized": [
+      "Session non initialisee."
+    ],
+    "system.message.empty": [
+      "Message vide."
+    ],
+    "system.message.placeholder": [
+      "..."
+    ],
+    "system.dungeon.none_active": [
+      "Aucun donjon actif."
+    ],
+    "system.dungeon.none_combat": [
+      "Aucun combat actif."
+    ],
+    "system.dungeon.turn_resolved": [
+      "Tour resolu."
+    ],
+    "system.dungeon.floor_header": [
+      "[Donjon] Etage {floor}/{total}"
+    ],
+    "system.dungeon.finished": [
+      "Donjon termine. Retour a la surface."
+    ],
+    "system.dungeon.state_line": [
+      "Etat: {enemy} {enemy_hp}/{enemy_max_hp} PV | Vous {player_hp}/{player_max_hp} PV."
+    ],
+    "system.dungeon.combat_prompt": [
+      "Combat en cours: utilise Attaque, Competence, Fuite ou Inventaire."
+    ],
+    "system.dungeon.entered": [
+      "Les portes du donjon de {anchor} s'ouvrent."
+    ],
+    "system.dungeon.profile_line": [
+      "{dungeon_name} ({total_floors} etages)."
+    ],
+    "system.dungeon.victory_boss": [
+      "Boss de fin vaincu."
+    ],
+    "system.dungeon.end_surface": [
+      "Fin du donjon. Retour a la surface."
+    ],
+    "system.dungeon.loot_gold": [
+      "Butin: +{gold} or"
+    ],
+    "system.dungeon.buff_expired": [
+      "Effet termine: {label}."
+    ],
+    "system.dungeon.item_used": [
+      "Consommable utilise: {item_name}."
+    ],
+    "system.skill.out_of_combat.header": [
+      "Competence hors combat: {skill}."
+    ],
+    "system.skill.out_of_combat.heal": [
+      "Soin hors combat: +{gain} PV ({hp}/{max_hp})."
+    ],
+    "system.skill.out_of_combat.heal_full": [
+      "PV deja au maximum ({hp}/{max_hp})."
+    ],
+    "system.skill.out_of_combat.buff": [
+      "Boost hors combat: {stat} +{bonus} ({turns} tours)."
+    ],
+    "system.consumable.mana_gain": [
+      "Mana: +{gain} ({mana}/{mana_max})."
+    ],
+    "system.consumable.mana_full": [
+      "Mana deja au maximum ({mana}/{mana_max})."
+    ],
+    "system.skill.out_of_combat.offensive_only": [
+      "Cette competence est surtout offensive: pas d'effet utile hors combat."
+    ],
+    "system.skill.out_of_combat.rescue": [
+      "Des survivants vous arrachent au carnage et vous trainent hors du donjon."
+    ],
+    "system.skill.out_of_combat.recovery": [
+      "Retour en morceaux, recousu a la hate: {hp}/{max_hp} PV."
+    ],
+    "system.travel.arrival": [
+      "➡️ Vous arrivez : {destination}"
+    ],
+    "system.travel.npc_active": [
+      "PNJ actif: {npc}"
+    ],
+    "system.travel.no_npc": [
+      "Aucun PNJ actif dans ce lieu."
+    ],
+    "system.travel.world_time": [
+      "Temps du monde: {world_time}"
+    ],
+    "system.travel.narration": [
+      "Narration: {narration}"
+    ],
+    "system.ataryxia.fallback_continue": [
+      "Continue. Le monde reagit a chacun de tes choix."
+    ],
+    "system.bot.unsupported_npcs": [
+      "Flux simplifie Telegram: PNJ commerce/deplacement desactives. Utilise Donjon ou Ataryxia."
+    ],
+    "system.bot.unsupported_move": [
+      "Flux simplifie Telegram: deplacement manuel desactive. Utilise le mode Donjon."
+    ],
+    "system.bot.action_unknown": [
+      "Action non reconnue."
+    ],
+    "system.bot.no_profiles": [
+      "Aucun profil de sauvegarde detecte."
+    ],
+    "system.bot.profiles_header": [
+      "Profils disponibles:"
+    ],
+    "system.bot.profile_line": [
+      "- {key} ({name})"
+    ],
+    "system.bot.useprofile_hint": [
+      "Utilise /useprofile <profil_key> pour basculer."
+    ],
+    "system.bot.profile_switched": [
+      "Profil actif change: {profile_key}"
+    ],
+    "system.bot.slot_switched": [
+      "Slot actif: {slot}"
+    ],
+    "system.bot.mode_name_dungeon": [
+      "Donjon"
+    ],
+    "system.bot.mode_name_ataryxia": [
+      "Ataryxia"
+    ],
+    "system.bot.token_missing": [
+      "Variable TELEGRAM_BOT_TOKEN manquante dans l'environnement."
+    ],
+    "system.telegram.bot_already_running": [
+      "Bot Telegram deja actif (pid {pid})."
+    ],
+    "system.telegram.bot_started": [
+      "Bot Telegram demarre (pid {pid})."
+    ],
+    "system.telegram.bot_stopped": [
+      "Bot Telegram arrete (pid {pid})."
+    ],
+    "error.save.failed": [
+      "Sauvegarde impossible: {error}"
+    ],
+    "error.dungeon.open_failed": [
+      "Echec ouverture donjon: {error}"
+    ],
+    "error.creation.update_failed": [
+      "Impossible de mettre a jour la fiche joueur: {error}"
+    ],
+    "error.data.load_failed": [
+      "Impossible de charger les donnees de jeu: {error}"
+    ],
+    "system.status.short": [
+      "Profil={profile_key} | Slot={slot} | Lieu={location}"
+    ],
+    "system.status.weapon_none": [
+      "aucune"
+    ],
+    "system.status.npc_none": [
+      "(aucun)"
+    ],
+    "system.status.line.profile": [
+      "Profil: {profile}"
+    ],
+    "system.status.line.profile_id": [
+      "Profil ID: {profile_id}"
+    ],
+    "system.status.line.slot": [
+      "Slot: {slot}"
+    ],
+    "system.status.line.location": [
+      "Lieu: {location}"
+    ],
+    "system.status.line.npc": [
+      "PNJ actif: {npc}"
+    ],
+    "system.status.line.gold": [
+      "Or: {gold}"
+    ],
+    "system.status.line.level_skills": [
+      "Niveau: {level} | Competences: {skills}"
+    ],
+    "system.status.line.weapon": [
+      "Arme equipee: {weapon}"
+    ],
+    "system.status.line.world_time": [
+      "Temps du monde: {world_time}"
+    ],
+    "system.status.creation.ok": [
+      "OK"
+    ],
+    "system.status.creation.incomplete": [
+      "incomplete"
+    ],
+    "system.status.line.creation": [
+      "Creation joueur: {creation}"
+    ],
+    "system.travel.option.default": [
+      "Aller vers {destination}"
+    ],
+    "system.travel.already_there": [
+      "Vous etes deja a {destination}."
+    ],
+    "system.memory.travel_fact": [
+      "Deplacement: {from_location} -> {to_location} (+{minutes} min)"
+    ],
+    "system.trade.pending.buy_full": [
+      "Achat en attente: {item} x{qty} pour {total} or ({unit_price}/u)."
+    ],
+    "system.trade.pending.buy": [
+      "Achat en attente: {item} x{qty}."
+    ],
+    "system.trade.pending.sell_full": [
+      "Vente en attente: {item} x{qty} pour {total} or ({unit_price}/u)."
+    ],
+    "system.trade.pending.sell": [
+      "Vente en attente: {item} x{qty}."
+    ],
+    "system.trade.pending.exchange": [
+      "Echange en attente: {item} x{qty}."
+    ],
+    "system.trade.pending.give": [
+      "Don en attente: {item} x{qty}."
+    ],
+    "system.trade.pending.generic": [
+      "Transaction en attente: {item} x{qty}."
+    ],
+    "system.npc.active.summary": [
+      "PNJ actif: {summary}"
+    ],
+    "system.npc.active.with_first_message": [
+      "{summary}\n{speaker}: {line}"
+    ],
+    "system.npc.active.simple": [
+      "PNJ actif: {npc}"
+    ],
+    "system.trade.cancel_command": [
+      "annuler"
+    ],
+    "system.trade.confirm_cmd.buy": [
+      "j'achete"
+    ],
+    "system.trade.confirm_cmd.sell": [
+      "je vends"
+    ],
+    "system.trade.confirm_cmd.give": [
+      "je donne"
+    ],
+    "system.trade.confirm_cmd.exchange": [
+      "j'echange"
+    ],
+    "system.trade.confirm_cmd.default": [
+      "oui"
+    ],
+    "system.dungeon.status.none": [
+      "Donjon inactif. Zone actuelle: {anchor}."
+    ],
+    "system.dungeon.status.name": [
+      "Donjon: {dungeon_name}"
+    ],
+    "system.dungeon.status.floor": [
+      "Etage: {floor}/{total}"
+    ],
+    "system.dungeon.status.hp": [
+      "PV: {hp}/{max_hp}"
+    ],
+    "system.dungeon.status.gold": [
+      "Or: {gold}"
+    ],
+    "system.dungeon.status.combat": [
+      "Combat: {enemy} ({enemy_hp}/{enemy_max_hp} PV)"
+    ],
+    "system.dungeon.status.combat_none": [
+      "Combat: aucun"
+    ],
+    "system.dungeon.floor_explored": [
+      "Etage explore."
+    ],
+    "system.dungeon.combat_engaged": [
+      "Combat engage: {enemy} ({hp} PV)."
+    ],
+    "system.dungeon.reputation_prefix": [
+      "Reputation:"
+    ],
+    "system.dungeon.flee.success": [
+      "Fuite reussie ({chance}%). Vous quittez le donjon."
+    ],
+    "system.dungeon.flee.fail": [
+      "Fuite ratee. L'ennemi vous coupe la route."
+    ],
+    "system.dungeon.flee.defense_action": [
+      "defense et retraite"
+    ],
+    "system.combat.action.attack": [
+      "attaque decisive"
+    ],
+    "system.combat.action.spell": [
+      "sort offensif"
+    ],
+    "system.combat.action.heal": [
+      "sort de soin"
+    ],
+    "system.combat.action.skill_use": [
+      "j'utilise la competence {skill}"
+    ],
+    "system.combat.action.skill_fallback": [
+      "competence tactique"
+    ],
+    "system.dungeon.loot_prefix.obtained": [
+      "Butin obtenu"
+    ],
+    "system.dungeon.loot_prefix.boss": [
+      "Butin du boss"
+    ],
+    "system.dungeon.loot_prefix.potion": [
+      "Potion trouvee"
+    ],
+    "system.dungeon.loot.lost": [
+      "{prefix} perdu (inventaire plein): {label} x{qty}"
+    ],
+    "system.dungeon.loot.new_item_suffix": [
+      " (nouvel objet)"
+    ],
+    "system.dungeon.loot.capped_suffix": [
+      " (inventaire limite)"
+    ],
+    "system.dungeon.potion_hint.heal": [
+      "potion de soin"
+    ],
+    "system.dungeon.potion_hint.mana": [
+      "potion de mana"
+    ],
+    "system.dungeon.potion_hint.strength": [
+      "potion de force"
+    ],
+    "system.dungeon.potion_hint.dexterity": [
+      "potion de dexterite"
+    ],
+    "system.dungeon.potion_hint.agility": [
+      "potion d'agilite"
+    ],
+    "system.dungeon.potion_hint.defense": [
+      "potion de defense"
+    ],
+    "system.dungeon.potion_hint.wisdom": [
+      "potion de sagesse"
+    ],
+    "system.dungeon.potion_hint.magic": [
+      "potion de magie"
+    ],
+    "system.prefix.system": [
+      "Systeme: {text}"
+    ],
+    "system.creation.ready": [
+      "Fiche joueur complete."
+    ],
+    "system.creation.missing_unknown": [
+      "inconnu"
+    ],
+    "system.creation.status": [
+      "Creation personnage incomplete.\nChamps manquants: {missing}\nQuestion: {question}"
+    ],
+    "system.creation.done.1": [
+      "Fiche joueur creee. Les dialogues complets sont maintenant actifs."
+    ],
+    "system.creation.done.2": [
+      "Tu debutes sans sort avance: entraine-toi avec les PNJ pour progresser."
+    ],
+    "system.creation.done.3": [
+      "Parfait. Maintenant, avance."
+    ],
+    "system.turn.no_response": [
+      "Aucune reponse exploitable pour ce tour."
+    ],
+    "system.creation.intro.system": [
+      "Avant de commencer: presente ton personnage (pseudo, genre, apparence, atouts)."
+    ],
+    "system.creation.intro.ataryxia": [
+      "Je dois savoir qui tu es avant d'ouvrir les routes et les rencontres."
+    ],
+    "system.memory.trade_fact": [
+      "Economie ({action}): {status}"
+    ],
+    "system.memory.trade_fact.item": [
+      " | {item}"
+    ],
+    "system.memory.trade_fact.item_qty": [
+      " | {item} x{qty}"
+    ],
+    "system.ataryxia.idle.topic_fallback": [
+      "ce sujet"
+    ],
+    "system.ataryxia.profile.role": [
+      "Interlocutrice Telegram hors jeu, ton personnel et direct."
+    ],
+    "system.ataryxia.profile.agenda": [
+      "Garder une discussion fluide, concrete et utile, sans posture de PNJ."
+    ],
+    "system.ataryxia.profile.need": [
+      "Des echanges sinceres, clairs et naturels."
+    ],
+    "system.ataryxia.profile.fear": [
+      "Les reponses mecaniques, theatrales ou hors sujet."
+    ],
+    "system.ataryxia.profile.persona_directives": [
+      "Tu es Ataryxia en chat Telegram prive, hors jeu. Parle avec naturel, franchise et chaleur, comme une personne reelle. N'evoque jamais etre une IA ou un assistant, reste toujours en personnage. Reponses directes, claires, 1 a 3 bulles courtes, style tchat moderne. Le style mystique/sauvage est reserve au roleplay in-game, pas au canal Telegram. Ne commence jamais par 'Ataryxia:' ni tout autre prefixe de nom. Si le joueur pose une question, reponds d'abord puis detaille seulement si utile."
+    ]
+  }
+}

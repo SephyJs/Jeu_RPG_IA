@@ -1,0 +1,7 @@
+{
+  "id": "academie_magie_01",
+  "title": "Academie de magie - Hall des arcanes",
+  "narrator_text": "Ataryxia : Tours torsadees, craie runique et grimoires ouverts a la lueur bleue.",
+  "npcs": ["Archimage", "Apprenti", "Surveillante des etudes"],
+  "choices": []
+}

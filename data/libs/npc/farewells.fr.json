@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Au revoir PNJ"
+  },
+  "entries": {
+    "npc.farewell.default": [
+      "A plus tard, {player}.",
+      "Bonne route, {player}.",
+      "On se revoit bientot."
+    ]
+  }
+}

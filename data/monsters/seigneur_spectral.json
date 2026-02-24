@@ -1,0 +1,29 @@
+{
+  "id": "seigneur_spectral",
+  "name": "Seigneur spectral",
+  "aliases": ["seigneur spectral", "archonte spectral"],
+  "archetype": "boss",
+  "tier": 4,
+  "description": "Le souverain des profondeurs, maitre des ames perdues.",
+  "combat": {
+    "base_hp": 30,
+    "base_dc": 15,
+    "base_attack_bonus": 6,
+    "base_damage_min": 5,
+    "base_damage_max": 10,
+    "hp_per_floor": 1.8,
+    "dc_per_5_floors": 1,
+    "attack_per_6_floors": 1,
+    "damage_per_8_floors": 1
+  },
+  "boss_modifiers": {
+    "hp_mult": 1.7,
+    "damage_mult": 1.5,
+    "dc_bonus": 3,
+    "attack_bonus": 2
+  },
+  "media": {
+    "image": "",
+    "clip": ""
+  }
+}

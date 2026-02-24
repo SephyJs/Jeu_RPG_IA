@@ -1,0 +1,45 @@
+{
+  "id": "marchand_lumeria",
+  "name": "Marchand de Lumeria",
+  "location": {
+    "location_id": "boutique_01",
+    "location_title": "La Boutique"
+  },
+  "npc_profile": {
+    "label": "Marchand de Lumeria",
+    "role": "Marchand"
+  },
+  "inventory": [
+    {
+      "item_id": "pain_01",
+      "stock": 40,
+      "price_multiplier": 1.0
+    },
+    {
+      "item_id": "potion_soin_01",
+      "stock": 16,
+      "price_multiplier": 1.05
+    },
+    {
+      "item_id": "potion_mana_01",
+      "stock": 14,
+      "price_multiplier": 1.07
+    },
+    {
+      "item_id": "potion_force_01",
+      "stock": 8,
+      "price_multiplier": 1.12
+    },
+    {
+      "item_id": "potion_defense_01",
+      "stock": 8,
+      "price_multiplier": 1.1
+    },
+    {
+      "item_id": "epee_apprenti",
+      "stock": 4,
+      "price_multiplier": 1.15
+    }
+  ],
+  "notes": "Marchand de base pour les tests du systeme de stock persistant."
+}

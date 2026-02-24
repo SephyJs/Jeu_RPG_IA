@@ -1,0 +1,7 @@
+{
+  "id": "armurerie_01",
+  "title": "Armurerie - Salle des armes",
+  "narrator_text": "Ataryxia : Racks de lances, cotes de mailles et boucliers attendent la prochaine alerte.",
+  "npcs": ["Maitre armurier", "Garde inspecteur"],
+  "choices": []
+}

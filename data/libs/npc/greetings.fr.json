@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Salutations PNJ"
+  },
+  "entries": {
+    "npc.greeting.default": [
+      "Bonjour {player}.",
+      "Salut {player}.",
+      "Te voila, {player}."
+    ],
+    "npc.greeting.friendly": [
+      "Content de te revoir, {player}.",
+      "Heureux de te voir passer, {player}."
+    ]
+  }
+}

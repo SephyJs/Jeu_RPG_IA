@@ -1,0 +1,7 @@
+{
+  "id": "quartier_artisanal_01",
+  "title": "Quartier artisanal - Grand carrefour",
+  "narrator_text": "Ataryxia : Marteaux, etals et cris de marchands se melent dans un tumulte vivant.",
+  "npcs": ["Marchand ambulant", "Artisane", "Livreur"],
+  "choices": []
+}

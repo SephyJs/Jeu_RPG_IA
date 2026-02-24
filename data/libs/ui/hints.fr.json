@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Indices et micro-guides interface"
+  },
+  "entries": {
+    "ui.hint.dungeon_use_buttons": [
+      "Mode Donjon: utilise les boutons (Monter etage / Attaque / Competence / Fuite / Inventaire)."
+    ],
+    "ui.hint.creation_usage": [
+      "Creation personnage incomplete."
+    ],
+    "ui.hint.profile_usage": [
+      "Usage: /useprofile <profil_key>"
+    ],
+    "ui.hint.slot_usage": [
+      "Usage: /slot <numero>"
+    ]
+  }
+}

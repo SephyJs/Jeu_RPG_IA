@@ -1,0 +1,7 @@
+{
+  "id": "sanctuaire_quartier_01",
+  "title": "Sanctuaire de quartier - Chapelle des veilleurs",
+  "narrator_text": "Ataryxia : Petite chapelle de pierre, toujours ouverte a celles et ceux qui cherchent un souffle de paix.",
+  "npcs": ["Acolyte", "Vieille devote"],
+  "choices": []
+}

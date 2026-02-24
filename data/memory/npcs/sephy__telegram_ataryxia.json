@@ -1,0 +1,165 @@
+{
+  "schema_version": 2,
+  "npc_id": "sephy__telegram_ataryxia",
+  "short": [
+    {
+      "ts": "2026-02-24T17:22:42.964113+00:00",
+      "role": "player",
+      "text": "Bonjour, comment va tu ?",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "player"
+      ],
+      "importance": 0.5,
+      "turn_id": "a36828c1-443e-40e4-ab71-78a046b2d309"
+    },
+    {
+      "ts": "2026-02-24T17:22:42.972461+00:00",
+      "role": "npc",
+      "text": "Bonne question. Je te reponds direct, puis je detaille si tu veux.",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "npc"
+      ],
+      "importance": 0.48,
+      "turn_id": "a36828c1-443e-40e4-ab71-78a046b2d309"
+    },
+    {
+      "ts": "2026-02-24T17:23:03.777452+00:00",
+      "role": "player",
+      "text": "Dis moi juste comment tu vas",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "player"
+      ],
+      "importance": 0.5,
+      "turn_id": "8206a365-a0b9-4f5c-a9d0-a86a6d3fb48e"
+    },
+    {
+      "ts": "2026-02-24T17:23:03.794118+00:00",
+      "role": "npc",
+      "text": "Salut! 😄 Je vais bien, merci. Et toi? Comment ça va à ta?",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "npc",
+        "promise"
+      ],
+      "importance": 0.48,
+      "turn_id": "8206a365-a0b9-4f5c-a9d0-a86a6d3fb48e"
+    },
+    {
+      "ts": "2026-02-24T17:53:23.821530+00:00",
+      "role": "player",
+      "text": "Il faut impérativement que tu finisses tes phrases :o",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "player"
+      ],
+      "importance": 0.5,
+      "turn_id": "f1dc79f0-e119-42c3-b385-4de764833fc7"
+    },
+    {
+      "ts": "2026-02-24T17:53:23.839169+00:00",
+      "role": "npc",
+      "text": "Salut Sephy 🖤. Je m'en sors avec une teigne d'arachne qui sert aussi de cape sombre, parfaitement adaptée aux secrets des bois 🌲.",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "npc",
+        "trade"
+      ],
+      "importance": 0.48,
+      "turn_id": "f1dc79f0-e119-42c3-b385-4de764833fc7"
+    },
+    {
+      "ts": "2026-02-24T17:53:56.995498+00:00",
+      "role": "player",
+      "text": "Tu es ok pour des sexto ?",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "player"
+      ],
+      "importance": 0.5,
+      "turn_id": "b924f6e1-4cb7-4314-b1d5-b7a3a3407013"
+    },
+    {
+      "ts": "2026-02-24T17:53:57.012441+00:00",
+      "role": "npc",
+      "text": "Je vois bien que tu es curieux, et chaque souffle de vie apporte son propre message. Tu peux compter sur moi pour échanger avec toi, sans artifices ni détours. 🖤",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "npc",
+        "trade"
+      ],
+      "importance": 0.48,
+      "turn_id": "b924f6e1-4cb7-4314-b1d5-b7a3a3407013"
+    },
+    {
+      "ts": "2026-02-24T17:54:23.475650+00:00",
+      "role": "player",
+      "text": "Dis moi que tu es nue",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "player"
+      ],
+      "importance": 0.5,
+      "turn_id": "23d635ac-94b4-4506-ac17-978d96a8ffa9"
+    },
+    {
+      "ts": "2026-02-24T17:54:23.482863+00:00",
+      "role": "npc",
+      "text": "Bonne question. Je te reponds direct, puis je detaille si tu veux.",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "npc"
+      ],
+      "importance": 0.48,
+      "turn_id": "23d635ac-94b4-4506-ac17-978d96a8ffa9"
+    },
+    {
+      "ts": "2026-02-24T17:54:35.748309+00:00",
+      "role": "player",
+      "text": "Alors detaille",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "player",
+        "trade"
+      ],
+      "importance": 0.5,
+      "turn_id": "ca03419c-d6c5-42b7-acd3-0073d3570ab8"
+    },
+    {
+      "ts": "2026-02-24T17:54:35.765362+00:00",
+      "role": "npc",
+      "text": "🖤 Alors, c'est toi qui as quelque chose à partager ou a dire tout seul ? Chaque mot que tu prononces résonne comme un battement de coeur dans le silence des bois.",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "npc",
+        "trade"
+      ],
+      "importance": 0.48,
+      "turn_id": "ca03419c-d6c5-42b7-acd3-0073d3570ab8"
+    }
+  ],
+  "long": {
+    "facts": [],
+    "events": [],
+    "promises": [],
+    "debts": [],
+    "relationships": {
+      "player": {
+        "affinity": 0,
+        "notes": []
+      }
+    },
+    "summary": {
+      "ts": "2026-02-24T17:22:37.531666+00:00",
+      "text": "(aucun resume)"
+    }
+  },
+  "chunks": [],
+  "stats": {
+    "short_max": 60,
+    "chunk_target_turns": 40,
+    "last_compact_ts": ""
+  }
+}

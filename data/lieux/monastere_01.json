@@ -1,0 +1,7 @@
+{
+  "id": "monastere_01",
+  "title": "Monastere - Cloitre des murmures",
+  "narrator_text": "Ataryxia : Le vent glisse entre les arches et les moines recitent leurs litanies.",
+  "npcs": ["Moine", "Maitresse du cloître"],
+  "choices": []
+}

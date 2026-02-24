@@ -1,0 +1,41 @@
+{
+  "trade": {
+    "merchant_faction": "Marchands",
+    "merchant_delta_small": 1,
+    "merchant_delta_large": 2,
+    "merchant_large_qty_threshold": 2,
+    "charity_faction": "Peuple",
+    "charity_delta_small": 2,
+    "charity_delta_large": 3,
+    "charity_large_qty_threshold": 2,
+    "generic_give_delta": 1
+  },
+  "quest": {
+    "default_faction": "Habitants",
+    "default_delta": 2,
+    "objective_deltas": {
+      "clear_dungeon_floors": 3,
+      "talk_to_npc": 3,
+      "reach_anchor": 3,
+      "explore_locations": 3,
+      "collect_gold": 2,
+      "send_messages": 2
+    },
+    "objective_factions": {
+      "clear_dungeon_floors": "Aventuriers",
+      "talk_to_npc": "Aventuriers",
+      "reach_anchor": "Explorateurs",
+      "explore_locations": "Explorateurs",
+      "collect_gold": "Marchands",
+      "send_messages": "Habitants"
+    }
+  },
+  "dungeon": {
+    "faction": "Aventuriers",
+    "default_delta": 1,
+    "high_floor_delta": 2,
+    "high_floor_threshold": 10,
+    "boss_delta": 3,
+    "eligible_event_types": ["monster", "mimic", "boss"]
+  }
+}

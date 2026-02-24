@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Repliques acceptation de quete"
+  },
+  "entries": {
+    "npc.quest.accept.default": [
+      "Parfait, je compte sur toi.",
+      "Mission acceptee. Reviens avec des resultats.",
+      "Tu as ma confiance pour cette quete."
+    ]
+  }
+}

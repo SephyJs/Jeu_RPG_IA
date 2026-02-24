@@ -1,0 +1,7 @@
+{
+  "id": "palais_royal_01",
+  "title": "Palais royal - Salle du trone",
+  "narrator_text": "Ataryxia : Les tentures royales et les statues d'anciens rois dominent une salle lourde de decrets.",
+  "npcs": ["Chambellan", "Garde royal", "Conseillere"],
+  "choices": []
+}

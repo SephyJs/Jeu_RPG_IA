@@ -1,0 +1,7 @@
+{
+  "id": "quartier_militaire_01",
+  "title": "Quartier militaire - Porte des remparts",
+  "narrator_text": "Ataryxia : Tambours de marche, odeur d'huile et d'acier; ici, la ville se tient prete a la guerre.",
+  "npcs": ["Caporal de garde", "Archer de ronde", "Ecuyer"],
+  "choices": []
+}

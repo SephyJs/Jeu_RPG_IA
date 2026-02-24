@@ -3,5 +3,15 @@
   "name": "Pain",
   "stack_max": 16,
   "type": "consumable",
-  "effects": [{ "kind": "heal", "value": 2 }]
+  "slot": "",
+  "rarity": "common",
+  "description": "Un pain rustique qui redonne un peu d'energie.",
+  "stat_bonuses": {},
+  "effects": [
+    {
+      "kind": "heal",
+      "value": 2
+    }
+  ],
+  "value_gold": 2
 }

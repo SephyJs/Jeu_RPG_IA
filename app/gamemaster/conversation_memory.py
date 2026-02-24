@@ -4,11 +4,27 @@ from datetime import datetime, timezone
 import re
 from typing import Any
 
+from app.core.memory import get_memory_service
 
-SHORT_TERM_MAX_ITEMS = 24
-LONG_TERM_PER_NPC_MAX_ITEMS = 60
-LONG_TERM_GLOBAL_MAX_ITEMS = 160
-MEMORY_KIND_ALLOWED = {"general", "identity", "quest", "trade", "combat", "training", "travel", "system"}
+
+SHORT_TERM_MAX_ITEMS = 60
+LONG_TERM_PER_NPC_MAX_ITEMS = 500
+LONG_TERM_GLOBAL_MAX_ITEMS = 500
+MEMORY_KIND_ALLOWED = {
+    "general",
+    "identity",
+    "quest",
+    "trade",
+    "combat",
+    "training",
+    "travel",
+    "system",
+    "secret",
+    "mensonge",
+    "event",
+    "promise",
+    "debt",
+}
 _NO_NPC_KEY = "__no_npc__"
 
 
@@ -37,8 +53,35 @@ def _safe_int(value: object, default: int = 0) -> int:
         return default
 
 
+def _memory_profile_key(state: Any) -> str:
+    gm_state = getattr(state, "gm_state", None)
+    if not isinstance(gm_state, dict):
+        return "default"
+    explicit = str(
+        gm_state.get("memory_profile_key")
+        or gm_state.get("profile_key")
+        or gm_state.get("save_profile_key")
+        or ""
+    ).strip()
+    if explicit:
+        return explicit
+    player = getattr(state, "player", None)
+    maybe_name = str(getattr(player, "name", "") or "").strip()
+    if maybe_name:
+        return maybe_name
+    return "default"
+
+
 def _classify_kind(text: str) -> str:
     t = str(text or "").casefold()
+    if any(k in t for k in ("promis", "promets", "je vais", "je ferai")):
+        return "promise"
+    if any(k in t for k in ("dette", "je te dois", "rembours", "payer")):
+        return "debt"
+    if any(k in t for k in ("mensonge", "menti", "mentir", "fausse piste")):
+        return "mensonge"
+    if any(k in t for k in ("secret", "cache", "cach", "rival", "preuve")):
+        return "secret"
     if any(k in t for k in ("quete", "mission", "objectif", "contrat")):
         return "quest"
     if any(k in t for k in ("acheter", "vendre", "prix", "or", "marchand", "echange", "donner")):
@@ -49,14 +92,16 @@ def _classify_kind(text: str) -> str:
         return "combat"
     if any(k in t for k in ("route", "voyage", "ville", "ruelle", "aller vers", "deplacement")):
         return "travel"
+    if any(k in t for k in ("incident", "evenement", "emeute", "intrigue", "alerte")):
+        return "event"
     if any(k in t for k in ("je m'appelle", "mon nom", "metier", "fonction", "identite", "qui es-tu")):
         return "identity"
     return "general"
 
 
-def _estimate_importance(text: str, kind: str) -> int:
+def _estimate_importance_legacy(text: str, kind: str) -> int:
     score = 1
-    if kind in {"identity", "quest", "trade", "combat", "training"}:
+    if kind in {"identity", "quest", "trade", "combat", "training", "event", "promise", "debt"}:
         score += 1
     t = str(text or "").casefold()
     if any(k in t for k in ("promis", "important", "souviens", "urgent", "secret", "reviens", "dettes")):
@@ -162,17 +207,26 @@ def ensure_conversation_memory_state(state: Any) -> None:
     state.conversation_global_long_term = sanitize_global_memory_payload(
         getattr(state, "conversation_global_long_term", [])
     )
+    if not isinstance(getattr(state, "gm_state", None), dict):
+        state.gm_state = {}
+    state.gm_state.setdefault("memory_profile_key", _memory_profile_key(state))
 
 
 def _append_unique_entry(target: list[dict], entry: dict, *, max_items: int) -> None:
     if target:
         last = target[-1]
-        if str(last.get("summary") or "") == str(entry.get("summary") or "") and str(last.get("kind") or "") == str(entry.get("kind") or ""):
+        if (
+            str(last.get("summary") or "") == str(entry.get("summary") or "")
+            and str(last.get("kind") or "") == str(entry.get("kind") or "")
+        ):
             last["at"] = str(entry.get("at") or last.get("at") or "")
             last["importance"] = max(_safe_int(last.get("importance"), 1), _safe_int(entry.get("importance"), 1))
             last["scene_id"] = str(entry.get("scene_id") or last.get("scene_id") or "")
             last["scene_title"] = str(entry.get("scene_title") or last.get("scene_title") or "")
-            last["world_time_minutes"] = max(_safe_int(last.get("world_time_minutes"), 0), _safe_int(entry.get("world_time_minutes"), 0))
+            last["world_time_minutes"] = max(
+                _safe_int(last.get("world_time_minutes"), 0),
+                _safe_int(entry.get("world_time_minutes"), 0),
+            )
             if str(entry.get("npc_name") or ""):
                 last["npc_name"] = str(entry.get("npc_name") or "")
             if str(entry.get("npc_key") or ""):
@@ -238,27 +292,36 @@ def remember_dialogue_turn(
     if safe_npc_reply:
         summary_bits.append(f"{safe_npc_name}: {safe_npc_reply}")
     summary = _clean_text(" | ".join(summary_bits), max_len=360)
-    if not summary:
-        return
+    if summary:
+        kind = _classify_kind(f"{safe_player_text} {safe_npc_reply}")
+        importance = _estimate_importance_legacy(f"{safe_player_text} {safe_npc_reply}", kind)
+        long_entry = {
+            "at": now_iso,
+            "summary": summary,
+            "kind": kind,
+            "importance": importance,
+            "scene_id": _clean_text(scene_id, max_len=120),
+            "scene_title": _clean_text(scene_title, max_len=120),
+            "world_time_minutes": max(0, _safe_int(world_time_minutes, 0)),
+            "npc_name": safe_npc_name,
+            "npc_key": key,
+        }
+        npc_bucket = state.conversation_long_term.setdefault(key, [])
+        _append_unique_entry(npc_bucket, long_entry, max_items=LONG_TERM_PER_NPC_MAX_ITEMS)
+        _append_unique_entry(state.conversation_global_long_term, long_entry, max_items=LONG_TERM_GLOBAL_MAX_ITEMS)
 
-    kind = _classify_kind(f"{safe_player_text} {safe_npc_reply}")
-    importance = _estimate_importance(f"{safe_player_text} {safe_npc_reply}", kind)
-    long_entry = {
-        "at": now_iso,
-        "summary": summary,
-        "kind": kind,
-        "importance": importance,
-        "scene_id": _clean_text(scene_id, max_len=120),
-        "scene_title": _clean_text(scene_title, max_len=120),
-        "world_time_minutes": max(0, _safe_int(world_time_minutes, 0)),
-        "npc_name": safe_npc_name,
-        "npc_key": key,
-    }
-
-    npc_bucket = state.conversation_long_term.setdefault(key, [])
-    _append_unique_entry(npc_bucket, long_entry, max_items=LONG_TERM_PER_NPC_MAX_ITEMS)
-
-    _append_unique_entry(state.conversation_global_long_term, long_entry, max_items=LONG_TERM_GLOBAL_MAX_ITEMS)
+    try:
+        service = get_memory_service()
+        profile_key = _memory_profile_key(state)
+        service.remember_dialogue_turn(
+            profile_key=profile_key,
+            npc_id=key,
+            player_text=safe_player_text,
+            npc_reply=safe_npc_reply,
+            scene_title=scene_title,
+        )
+    except Exception:
+        pass
 
 
 def remember_system_event(
@@ -297,15 +360,69 @@ def remember_system_event(
         _append_unique_entry(bucket, entry, max_items=LONG_TERM_PER_NPC_MAX_ITEMS)
     _append_unique_entry(state.conversation_global_long_term, entry, max_items=LONG_TERM_GLOBAL_MAX_ITEMS)
 
+    try:
+        service = get_memory_service()
+        profile_key = _memory_profile_key(state)
+        service.remember_system_event(
+            profile_key=profile_key,
+            npc_id=None if key == _NO_NPC_KEY else key,
+            fact_text=summary,
+            kind=normalized_kind,
+            importance=max(0.0, min(1.0, float(max(1, min(5, _safe_int(importance, 3))) / 5.0))),
+            world_only=(key == _NO_NPC_KEY),
+        )
+    except Exception:
+        pass
+
+
+def _latest_query_text(state: Any) -> str:
+    gm_state = getattr(state, "gm_state", None)
+    if isinstance(gm_state, dict):
+        text = _clean_text(gm_state.get("conversation_last_player_line"), max_len=240)
+        if text and text != "(aucune)":
+            return text
+
+    short = getattr(state, "conversation_short_term", None)
+    if isinstance(short, dict):
+        for entries in short.values():
+            if not isinstance(entries, list):
+                continue
+            for row in reversed(entries):
+                if not isinstance(row, dict):
+                    continue
+                if str(row.get("role") or "").strip().casefold() == "player":
+                    text = _clean_text(row.get("text"), max_len=240)
+                    if text:
+                        return text
+    return ""
+
 
 def build_short_term_context(state: Any, npc_key: str | None, *, max_lines: int = 10) -> str:
     ensure_conversation_memory_state(state)
     key = _clean_key(npc_key)
+    query = _latest_query_text(state)
+    try:
+        service = get_memory_service()
+        ctx = service.retrieve_context(
+            profile_key=_memory_profile_key(state),
+            npc_id=key,
+            query=query,
+            mode="npc",
+            short_limit=max(1, max_lines),
+            long_limit=12,
+            retrieved_limit=10,
+        )
+        text = ctx.short_text()
+        if text and text != "(aucun echange recent)":
+            return text
+    except Exception:
+        pass
+
     entries = state.conversation_short_term.get(key, [])
     if not isinstance(entries, list) or not entries:
         return "(aucun echange recent)"
     lines: list[str] = []
-    for entry in entries[-max(1, max_lines):]:
+    for entry in entries[-max(1, max_lines) :]:
         if not isinstance(entry, dict):
             continue
         speaker = _clean_text(entry.get("speaker"), max_len=80) or "Inconnu"
@@ -319,7 +436,6 @@ def build_short_term_context(state: Any, npc_key: str | None, *, max_lines: int 
 def _select_long_entries(entries: list[dict], *, max_items: int) -> list[dict]:
     if not entries:
         return []
-
     selected: list[dict] = []
     seen: set[tuple[str, str]] = set()
     for entry in reversed(entries):
@@ -333,7 +449,6 @@ def _select_long_entries(entries: list[dict], *, max_items: int) -> list[dict]:
         if _safe_int(entry.get("importance"), 1) >= 4:
             selected.append(entry)
             seen.add(marker)
-
     for entry in reversed(entries):
         if len(selected) >= max_items:
             break
@@ -344,7 +459,6 @@ def _select_long_entries(entries: list[dict], *, max_items: int) -> list[dict]:
             continue
         selected.append(entry)
         seen.add(marker)
-
     selected.reverse()
     return selected
 
@@ -352,14 +466,29 @@ def _select_long_entries(entries: list[dict], *, max_items: int) -> list[dict]:
 def build_long_term_context(state: Any, npc_key: str | None, *, max_items: int = 8) -> str:
     ensure_conversation_memory_state(state)
     key = _clean_key(npc_key)
+    query = _latest_query_text(state)
+    try:
+        service = get_memory_service()
+        ctx = service.retrieve_context(
+            profile_key=_memory_profile_key(state),
+            npc_id=key,
+            query=query,
+            mode="npc",
+            short_limit=8,
+            long_limit=max(1, max_items),
+            retrieved_limit=10,
+        )
+        if ctx.long_lines:
+            return "\n".join(ctx.long_lines[: max(1, max_items)])
+    except Exception:
+        pass
+
     bucket = state.conversation_long_term.get(key, [])
     if not isinstance(bucket, list) or not bucket:
         return "(aucune memoire long terme)"
-
     chosen = _select_long_entries(bucket, max_items=max(1, max_items))
     if not chosen:
         return "(aucune memoire long terme)"
-
     lines: list[str] = []
     for entry in chosen:
         kind = _clean_text(entry.get("kind"), max_len=16) or "general"
@@ -373,14 +502,30 @@ def build_long_term_context(state: Any, npc_key: str | None, *, max_items: int =
 
 def build_global_memory_context(state: Any, *, max_items: int = 6) -> str:
     ensure_conversation_memory_state(state)
+    query = _latest_query_text(state)
+    try:
+        service = get_memory_service()
+        ctx = service.retrieve_context(
+            profile_key=_memory_profile_key(state),
+            npc_id=str(getattr(state, "selected_npc", "") or ""),
+            query=query,
+            mode="world",
+            short_limit=0,
+            long_limit=max(1, max_items),
+            retrieved_limit=max(1, max_items),
+        )
+        text = ctx.world_text()
+        if text and text != "(aucune memoire globale)":
+            return text
+    except Exception:
+        pass
+
     entries = state.conversation_global_long_term
     if not isinstance(entries, list) or not entries:
         return "(aucune memoire globale)"
-
     chosen = _select_long_entries(entries, max_items=max(1, max_items))
     if not chosen:
         return "(aucune memoire globale)"
-
     lines: list[str] = []
     for entry in chosen:
         summary = _clean_text(entry.get("summary"), max_len=220)
@@ -393,3 +538,22 @@ def build_global_memory_context(state: Any, *, max_items: int = 6) -> str:
         else:
             lines.append(f"- ({kind}) {summary}")
     return "\n".join(lines) if lines else "(aucune memoire globale)"
+
+
+def build_retrieved_context(state: Any, npc_key: str | None, *, max_items: int = 10) -> str:
+    ensure_conversation_memory_state(state)
+    key = _clean_key(npc_key)
+    try:
+        service = get_memory_service()
+        ctx = service.retrieve_context(
+            profile_key=_memory_profile_key(state),
+            npc_id=key,
+            query=_latest_query_text(state),
+            mode="both",
+            short_limit=8,
+            long_limit=12,
+            retrieved_limit=max(1, max_items),
+        )
+        return ctx.retrieved_text()
+    except Exception:
+        return "(aucun rappel semantique)"

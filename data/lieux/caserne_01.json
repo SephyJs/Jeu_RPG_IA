@@ -1,0 +1,7 @@
+{
+  "id": "caserne_01",
+  "title": "Caserne - Cour de rassemblement",
+  "narrator_text": "Ataryxia : Les soldats s'alignent au son du cor, armes brillantes et regards durs.",
+  "npcs": ["Sergent", "Recrue", "Intendante"],
+  "choices": []
+}

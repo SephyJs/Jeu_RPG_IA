@@ -1,0 +1,7 @@
+{
+  "id": "scriptoria_01",
+  "title": "Scriptoria - Salle des parchemins",
+  "narrator_text": "Ataryxia : Plumes, encres et cire chaude tracent la memoire du royaume.",
+  "npcs": ["Scribe", "Moine copiste", "Relieuse"],
+  "choices": []
+}

@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "recipes": [
+    {
+      "id": "infusion_soin",
+      "name": "Infusion de soin",
+      "description": "Restaure un peu de vitalite.",
+      "station": "alchimie",
+      "inputs": [
+        {
+          "item_id": "pain_01",
+          "qty": 2
+        }
+      ],
+      "outputs": [
+        {
+          "item_id": "potion_soin_01",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "id": "infusion_mana",
+      "name": "Infusion de mana",
+      "description": "Recharge la reserve magique.",
+      "station": "alchimie",
+      "inputs": [
+        {
+          "item_id": "pain_01",
+          "qty": 2
+        }
+      ],
+      "outputs": [
+        {
+          "item_id": "potion_mana_01",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "id": "elixir_force",
+      "name": "Elixir de force",
+      "description": "Mixe soin et mana pour un boost offensif.",
+      "station": "alchimie",
+      "inputs": [
+        {
+          "item_id": "potion_soin_01",
+          "qty": 1
+        },
+        {
+          "item_id": "potion_mana_01",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item_id": "potion_force_01",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "id": "elixir_defense",
+      "name": "Elixir de defense",
+      "description": "Preparation defensive pour les expeditions.",
+      "station": "alchimie",
+      "inputs": [
+        {
+          "item_id": "potion_soin_01",
+          "qty": 1
+        },
+        {
+          "item_id": "potion_dexterite_01",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item_id": "potion_defense_01",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "id": "lame_apprenti",
+      "name": "Lame d'apprenti",
+      "description": "Assemblage simple a la forge.",
+      "station": "forge",
+      "inputs": [
+        {
+          "item_id": "potion_force_01",
+          "qty": 1
+        },
+        {
+          "item_id": "pain_01",
+          "qty": 3
+        }
+      ],
+      "outputs": [
+        {
+          "item_id": "epee_apprenti",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "id": "elixir_agilite",
+      "name": "Elixir d'agilite",
+      "description": "Melange reactif pour gagner en vitesse.",
+      "station": "alchimie",
+      "inputs": [
+        {
+          "item_id": "potion_mana_01",
+          "qty": 1
+        },
+        {
+          "item_id": "potion_dexterite_01",
+          "qty": 1
+        }
+      ],
+      "outputs": [
+        {
+          "item_id": "potion_agilite_01",
+          "qty": 1
+        }
+      ]
+    }
+  ]
+}

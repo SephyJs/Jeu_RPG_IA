@@ -55,11 +55,19 @@ Depuis la racine du projet:
 Puis ouvrir dans le navigateur:
 - http://127.0.0.1:8080
 
+Pages principales:
+- /game (jeu)
+- /studio (edition de contenu)
+
+Tests:
+- python3 -m pytest -q
+
 6) Variables d'environnement (optionnel)
 Vous pouvez changer quel modele est utilise par role:
 - ATARYXIA_RULES_MODEL_KEY
 - ATARYXIA_DIALOGUE_MODEL_KEY
 - ATARYXIA_NARRATION_MODEL_KEY
+- ATARYXIA_TELEGRAM_TOKEN_SECRET (recommande pour chiffrer les tokens Telegram stockes localement)
 
 Le projet charge automatiquement le fichier `.env` a la racine.
 Vous pouvez partir du template fourni:

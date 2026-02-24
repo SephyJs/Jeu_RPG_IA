@@ -1,0 +1,12 @@
+{
+  "id": "livre_necromancie",
+  "name": "Livre de nécromancie",
+  "stack_max": 1,
+  "type": "misc",
+  "slot": "",
+  "rarity": "common",
+  "description": "Un livre sur les secrets de la nécromancie.",
+  "stat_bonuses": {},
+  "effects": [],
+  "value_gold": 50
+}

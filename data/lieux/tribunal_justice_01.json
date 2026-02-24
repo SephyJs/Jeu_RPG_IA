@@ -1,0 +1,7 @@
+{
+  "id": "tribunal_justice_01",
+  "title": "Tribunal de justice - Salle des jugements",
+  "narrator_text": "Ataryxia : Les serments s'y brisent aussi vite que les destins.",
+  "npcs": ["Juge", "Huissier", "Plaignante"],
+  "choices": []
+}

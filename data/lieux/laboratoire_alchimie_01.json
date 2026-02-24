@@ -1,0 +1,7 @@
+{
+  "id": "laboratoire_alchimie_01",
+  "title": "Laboratoire d'alchimie - Salle des cornues",
+  "narrator_text": "Ataryxia : Vapeurs colorees et odeurs metalliques dansent entre les etablis.",
+  "npcs": ["Alchimiste", "Assistante", "Fournisseur de reagents"],
+  "choices": []
+}

@@ -1,6 +1,6 @@
 {
   "id": "taverne_01",
-  "title": "Taverne - Salle principale",
+  "title": "Taverne - Le Gobelet Fendu",
   "narrator_text": "Ataryxia : Chaleur, rires et chopes. Un barde gratte des accords au fond.",
   "npcs": ["Aubergiste", "Serveuse", "Barde"],
   "choices": [

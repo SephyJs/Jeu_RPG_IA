@@ -1,0 +1,7 @@
+{
+  "id": "tours_guet_01",
+  "title": "Tours de guet - Salle des vigies",
+  "narrator_text": "Ataryxia : Depuis les remparts, les sentinelles scrutent l'horizon sans relache.",
+  "npcs": ["Vigie", "Messager des remparts"],
+  "choices": []
+}

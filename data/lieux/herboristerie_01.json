@@ -1,0 +1,7 @@
+{
+  "id": "herboristerie_01",
+  "title": "Herboristerie - Comptoir des plantes rares",
+  "narrator_text": "Ataryxia : Racines sechees, fioles vertes et parfums de foret emplissent la boutique.",
+  "npcs": ["Herboriste", "Cueilleuse"],
+  "choices": []
+}

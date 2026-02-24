@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import random
+import re
+import unicodedata
 from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
-from .location_manager import MAP_ANCHORS, canonical_anchor, official_neighbors
+from .location_manager import canonical_anchor, official_neighbors
 from .models import model_for
 
 
@@ -33,6 +35,20 @@ class QuestRewardsDraft(BaseModel):
     temple_heal_bonus: int = 0
 
 
+class QuestBranchOptionDraft(BaseModel):
+    id: str = ""
+    label: str
+    description: str = ""
+    objective_delta: int = 0
+    rewards_bonus: QuestRewardsDraft = Field(default_factory=QuestRewardsDraft)
+    reputation: dict[str, int] = Field(default_factory=dict)
+
+
+class QuestBranchDraft(BaseModel):
+    prompt: str = ""
+    options: list[QuestBranchOptionDraft] = Field(default_factory=list)
+
+
 class QuestDraft(BaseModel):
     title: str
     description: str
@@ -50,6 +66,9 @@ class QuestDraft(BaseModel):
     progress_hint: str = ""
     quest_intro: str = ""
     rewards: QuestRewardsDraft = Field(default_factory=QuestRewardsDraft)
+    deadline_hours: int = 0
+    failure_consequence: str = ""
+    branching: QuestBranchDraft = Field(default_factory=QuestBranchDraft)
 
 
 class QuestManager:
@@ -121,11 +140,34 @@ class QuestManager:
             "target_anchor": "Lumeria",
             "progress_hint": "Conseil de progression en une phrase",
             "quest_intro": "Phrase que le PNJ dit en donnant la quete",
+            "deadline_hours": 24,
+            "failure_consequence": "Consequence narrative si la quete echoue",
             "rewards": {
                 "gold": 10,
                 "items": [{"item_id": "pain_01", "qty": 1}],
                 "shop_discount_pct": 0,
                 "temple_heal_bonus": 0,
+            },
+            "branching": {
+                "prompt": "Choix moral ou tactique",
+                "options": [
+                    {
+                        "id": "diplomatie",
+                        "label": "Voie diplomatique",
+                        "description": "Prendre plus de temps, moins de violence.",
+                        "objective_delta": 1,
+                        "rewards_bonus": {"gold": 0, "items": [], "shop_discount_pct": 2, "temple_heal_bonus": 0},
+                        "reputation": {"Habitants": 2},
+                    },
+                    {
+                        "id": "coercition",
+                        "label": "Voie coercitive",
+                        "description": "Regler vite, mais marquer les esprits.",
+                        "objective_delta": -1,
+                        "rewards_bonus": {"gold": 8, "items": [], "shop_discount_pct": 0, "temple_heal_bonus": 0},
+                        "reputation": {"Habitants": -2, "Aventuriers": 1},
+                    },
+                ],
             },
         }
 
@@ -146,6 +188,8 @@ class QuestManager:
             "- Pour reach_anchor: target_anchor doit etre un ancrage officiel.\n"
             f"- Items connus: {', '.join(known_items) if known_items else 'pain_01'}.\n"
             "- Rewards: au moins un benefice concret (or, item, reduction, bonus temple).\n"
+            "- deadline_hours: 0 si pas de delai, sinon 6..72 heures.\n"
+            "- Ajoute un branching avec 2 options pour donner un vrai choix au joueur.\n"
             "Contexte profil PNJ (optionnel):\n"
             f"{profile_hint}\n"
             "Schema:\n"
@@ -172,6 +216,8 @@ class QuestManager:
             progress_hint="Discute encore un peu avec les habitants.",
             quest_intro="J'aurais besoin d'un coup de main. Montre-moi ce que tu sais faire.",
             rewards=QuestRewardsDraft(gold=15, items=[QuestRewardItemDraft(item_id="pain_01", qty=1)]),
+            deadline_hours=24,
+            failure_consequence=f"{npc_name} perd patience et retire son soutien.",
         )
 
     def _normalize_draft(self, *, draft: QuestDraft, npc_name: str, map_anchor: str) -> dict:
@@ -195,6 +241,15 @@ class QuestManager:
         description = str(draft.description or "").strip() or f"{npc_name} vous confie une mission."
         progress_hint = str(draft.progress_hint or "").strip()
         quest_intro = str(draft.quest_intro or "").strip() or "J'ai une mission pour toi."
+        deadline_hours = self._normalize_deadline_hours(draft.deadline_hours)
+        failure_consequence = str(draft.failure_consequence or "").strip()
+        if not failure_consequence:
+            failure_consequence = f"Echec de mission: {npc_name} vous fera moins confiance."
+        branching = self._normalize_branching(
+            draft.branching,
+            objective_type=objective_type,
+            target_count=target_count,
+        )
 
         return {
             "title": title[:90],
@@ -206,6 +261,9 @@ class QuestManager:
             "progress_hint": progress_hint[:220],
             "quest_intro": quest_intro[:220],
             "rewards": rewards,
+            "deadline_hours": deadline_hours,
+            "failure_consequence": failure_consequence[:220],
+            "branching": branching,
         }
 
     def _normalize_target_count(self, objective_type: str, raw_value: int) -> int:
@@ -245,6 +303,108 @@ class QuestManager:
             "shop_discount_pct": shop_discount_pct,
             "temple_heal_bonus": temple_heal_bonus,
         }
+
+    def _normalize_deadline_hours(self, raw_value: int) -> int:
+        value = max(0, int(raw_value or 0))
+        if value <= 0:
+            return 0
+        return min(max(value, 6), 96)
+
+    def _normalize_branching(
+        self,
+        raw: QuestBranchDraft,
+        *,
+        objective_type: str,
+        target_count: int,
+    ) -> dict:
+        options: list[dict] = []
+        source_options = raw.options if isinstance(raw, QuestBranchDraft) else []
+        for idx, option in enumerate(source_options[:3]):
+            if not isinstance(option, QuestBranchOptionDraft):
+                continue
+            label = str(option.label or "").strip()
+            if not label:
+                continue
+            option_id = self._slug(str(option.id or "") or label, fallback=f"option_{idx + 1}")
+            bonus = self._normalize_rewards(option.rewards_bonus)
+            rep_map: dict[str, int] = {}
+            if isinstance(option.reputation, dict):
+                for key, value in option.reputation.items():
+                    faction = re.sub(r"\s+", " ", str(key or "").strip())
+                    if not faction:
+                        continue
+                    try:
+                        delta = int(value)
+                    except (TypeError, ValueError):
+                        continue
+                    if delta == 0:
+                        continue
+                    rep_map[faction[:64]] = max(-15, min(15, delta))
+            options.append(
+                {
+                    "id": option_id[:40],
+                    "label": label[:80],
+                    "description": str(option.description or "").strip()[:180],
+                    "objective_delta": max(-3, min(3, int(option.objective_delta or 0))),
+                    "rewards_bonus": bonus,
+                    "reputation": rep_map,
+                }
+            )
+
+        if len(options) < 2:
+            options = self._fallback_branching_options(
+                objective_type=objective_type,
+                target_count=target_count,
+            )
+
+        prompt = str(raw.prompt or "").strip() if isinstance(raw, QuestBranchDraft) else ""
+        if not prompt:
+            prompt = "Comment veux-tu mener cette mission ?"
+
+        return {
+            "prompt": prompt[:220],
+            "options": options[:3],
+        }
+
+    def _fallback_branching_options(self, *, objective_type: str, target_count: int) -> list[dict]:
+        diplomacy = {
+            "id": "diplomatie",
+            "label": "Voie diplomatique",
+            "description": "Approche prudente et respectueuse.",
+            "objective_delta": 1,
+            "rewards_bonus": {
+                "gold": 0,
+                "items": [],
+                "shop_discount_pct": 2,
+                "temple_heal_bonus": 0,
+            },
+            "reputation": {"Habitants": 2},
+        }
+        coercion = {
+            "id": "coercition",
+            "label": "Voie coercitive",
+            "description": "Approche rapide mais risquee pour ta reputation.",
+            "objective_delta": -1,
+            "rewards_bonus": {
+                "gold": 8,
+                "items": [],
+                "shop_discount_pct": 0,
+                "temple_heal_bonus": 0,
+            },
+            "reputation": {"Habitants": -2, "Aventuriers": 1},
+        }
+        if objective_type in {"collect_gold", "clear_dungeon_floors"}:
+            coercion["objective_delta"] = -2 if target_count >= 3 else -1
+            diplomacy["objective_delta"] = 0
+        if objective_type == "talk_to_npc":
+            diplomacy["objective_delta"] = 0
+            coercion["objective_delta"] = 0
+        return [diplomacy, coercion]
+
+    def _slug(self, text: str, *, fallback: str = "option") -> str:
+        folded = unicodedata.normalize("NFKD", str(text or "")).encode("ascii", "ignore").decode("ascii")
+        slug = re.sub(r"[^a-z0-9]+", "_", folded.casefold()).strip("_")
+        return slug or fallback
 
     def _has_any_reward(self, rewards: dict) -> bool:
         return bool(

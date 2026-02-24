@@ -1,0 +1,29 @@
+{
+  "id": "goule_cendreuse",
+  "name": "Goule cendreuse",
+  "aliases": ["goule cendreuse"],
+  "archetype": "brute",
+  "tier": 1,
+  "description": "Une goule famelique, agressive mais fragile.",
+  "combat": {
+    "base_hp": 18,
+    "base_dc": 11,
+    "base_attack_bonus": 3,
+    "base_damage_min": 3,
+    "base_damage_max": 6,
+    "hp_per_floor": 1.2,
+    "dc_per_5_floors": 1,
+    "attack_per_6_floors": 1,
+    "damage_per_8_floors": 1
+  },
+  "boss_modifiers": {
+    "hp_mult": 1.5,
+    "damage_mult": 1.35,
+    "dc_bonus": 2,
+    "attack_bonus": 1
+  },
+  "media": {
+    "image": "",
+    "clip": ""
+  }
+}

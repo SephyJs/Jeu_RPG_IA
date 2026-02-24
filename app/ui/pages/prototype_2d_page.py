@@ -8,6 +8,15 @@ from nicegui import ui
 
 from app.gamemaster.models import model_for
 from app.gamemaster.ollama_client import OllamaClient
+from app.ui.pages.prototype_2d_city import (
+    city_label_from_key as _city_label_from_key,
+    city_options_from_config as _city_options_from_config,
+    clamp as _clamp,
+    compute_city_context as _compute_city_context,
+    minimums_to_text as _minimums_to_text,
+    read_city_buildings_config as _read_city_buildings_config,
+    to_non_negative_int as _to_non_negative_int,
+)
 
 
 TILE_SIZE = 44
@@ -248,178 +257,19 @@ SYMBOL_ALIASES = {
     "-": ".",
 }
 
-
-def _clamp(value: int, minimum: int, maximum: int) -> int:
-    if value < minimum:
-        return minimum
-    if value > maximum:
-        return maximum
-    return value
-
-
-def _to_non_negative_int(value: object, fallback: int = 0) -> int:
-    try:
-        ivalue = int(value)
-    except (TypeError, ValueError):
-        return max(0, int(fallback))
-    return max(0, ivalue)
-
-
-def _to_float(value: object, fallback: float) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return float(fallback)
-
-
-def _city_label_from_key(city_key: str) -> str:
-    return str(city_key or "inconnue").replace("_", " ").strip().title()
-
-
-def _read_city_buildings_config() -> dict:
-    try:
-        raw = json.loads(CITY_BUILDINGS_CONFIG_PATH.read_text(encoding="utf-8"))
-        return raw if isinstance(raw, dict) else {}
-    except Exception:
-        return {}
-
-
-def _city_options_from_config(config: dict) -> dict[str, str]:
-    cities_raw = config.get("cities")
-    cities = cities_raw if isinstance(cities_raw, dict) else {}
-    if not cities:
-        return {DEFAULT_CITY_KEY: _city_label_from_key(DEFAULT_CITY_KEY)}
-
-    options: dict[str, str] = {}
-    for key in sorted(cities.keys()):
-        city_raw = cities.get(key)
-        city = city_raw if isinstance(city_raw, dict) else {}
-        label = str(city.get("label") or _city_label_from_key(str(key)))
-        options[str(key)] = label
-    return options
-
-
-def _sample_building_plan(expanded: list[str], target_count: int) -> list[str]:
-    if target_count <= 0:
-        return []
-    if not expanded:
-        return ["maison" for _ in range(target_count)]
-    if len(expanded) <= target_count:
-        result = list(expanded)
-        while len(result) < target_count:
-            result.append(expanded[-1])
-        return result
-
-    step = len(expanded) / float(target_count)
-    sampled: list[str] = []
-    for i in range(target_count):
-        idx = min(len(expanded) - 1, int(i * step))
-        sampled.append(expanded[idx])
-    return sampled
-
-
-def _compute_city_context(config: dict, city_key: str) -> dict[str, object]:
-    cities_raw = config.get("cities")
-    cities = cities_raw if isinstance(cities_raw, dict) else {}
-    selected_city_key = str(city_key or "")
-    if (selected_city_key not in cities) and cities:
-        selected_city_key = sorted(cities.keys())[0]
-    if not selected_city_key:
-        selected_city_key = DEFAULT_CITY_KEY
-
-    city_raw = cities.get(selected_city_key)
-    city_cfg = city_raw if isinstance(city_raw, dict) else {}
-    city_label = str(city_cfg.get("label") or _city_label_from_key(selected_city_key))
-
-    size = str(city_cfg.get("size") or "petite_ville")
-    size_profiles_raw = config.get("size_profiles")
-    size_profiles = size_profiles_raw if isinstance(size_profiles_raw, dict) else {}
-    size_profile_raw = size_profiles.get(size)
-    size_profile = size_profile_raw if isinstance(size_profile_raw, dict) else {}
-
-    override_raw = city_cfg.get("minimum_buildings_override")
-    override = override_raw if isinstance(override_raw, dict) else {}
-
-    forbidden_by_size_raw = config.get("forbidden_by_size")
-    forbidden_by_size = forbidden_by_size_raw if isinstance(forbidden_by_size_raw, dict) else {}
-    forbidden_raw = forbidden_by_size.get(size)
-    forbidden = {str(v) for v in forbidden_raw} if isinstance(forbidden_raw, list) else set()
-
-    catalog_raw = config.get("building_catalog")
-    catalog = [str(v) for v in catalog_raw] if isinstance(catalog_raw, list) else []
-
-    all_keys = set(catalog)
-    all_keys.update(str(k) for k in size_profile.keys())
-    all_keys.update(str(k) for k in override.keys())
-    if not all_keys:
-        all_keys = {"maison"}
-
-    merge_strategy = str(config.get("merge_strategy") or "max_profile_and_override")
-    minimums: dict[str, int] = {}
-    for key in sorted(all_keys):
-        profile_value = _to_non_negative_int(size_profile.get(key), 0)
-        override_value = _to_non_negative_int(override.get(key), 0)
-
-        if merge_strategy == "profile_plus_override":
-            value = profile_value + override_value
-        elif merge_strategy == "override_only":
-            value = override_value if key in override else profile_value
-        else:
-            value = max(profile_value, override_value)
-
-        if key in forbidden:
-            value = 0
-        minimums[key] = value
-
-    nonzero_minimums = [(k, v) for k, v in minimums.items() if v > 0]
-    nonzero_minimums.sort(key=lambda item: (-item[1], item[0]))
-
-    expanded: list[str] = []
-    for building_type, count in nonzero_minimums:
-        expanded.extend([building_type for _ in range(count)])
-    required_total = len(expanded)
-
-    scale = _to_float(config.get("prototype_exterieur_scale"), PROTOTYPE_EXTERIOR_SCALE_DEFAULT)
-    min_buildings = _to_non_negative_int(config.get("prototype_exterieur_min_buildings"), PROTOTYPE_EXTERIOR_MIN_BUILDINGS_DEFAULT)
-    max_buildings = _to_non_negative_int(config.get("prototype_exterieur_max_buildings"), PROTOTYPE_EXTERIOR_MAX_BUILDINGS_DEFAULT)
-    if min_buildings <= 0:
-        min_buildings = PROTOTYPE_EXTERIOR_MIN_BUILDINGS_DEFAULT
-    if max_buildings < min_buildings:
-        max_buildings = min_buildings
-
-    if not expanded:
-        expanded = ["maison" for _ in range(min_buildings)]
-        required_total = len(expanded)
-
-    scaled_total = int(round(required_total * scale))
-    target_total = _clamp(scaled_total, min_buildings, max_buildings)
-    building_plan = _sample_building_plan(expanded, target_total)
-
-    return {
-        "city_key": selected_city_key,
-        "city_label": city_label,
-        "size": size,
-        "minimums": minimums,
-        "nonzero_minimums": nonzero_minimums,
-        "required_total": required_total,
-        "target_total": target_total,
-        "building_plan": building_plan,
-    }
-
-
-def _minimums_to_text(nonzero_minimums: list[tuple[str, int]], limit: int = 8) -> str:
-    if not nonzero_minimums:
-        return "aucun minimum specifique"
-    parts = [f"{k}={v}" for k, v in nonzero_minimums[:limit]]
-    return ", ".join(parts)
-
-
 def _build_prototype_page() -> None:
     llm = OllamaClient()
-    city_buildings_config = _read_city_buildings_config()
-    city_options = _city_options_from_config(city_buildings_config)
+    city_buildings_config = _read_city_buildings_config(CITY_BUILDINGS_CONFIG_PATH)
+    city_options = _city_options_from_config(city_buildings_config, default_city_key=DEFAULT_CITY_KEY)
     initial_city_key = DEFAULT_CITY_KEY if DEFAULT_CITY_KEY in city_options else next(iter(city_options))
-    initial_city_context = _compute_city_context(city_buildings_config, initial_city_key)
+    initial_city_context = _compute_city_context(
+        city_buildings_config,
+        initial_city_key,
+        default_city_key=DEFAULT_CITY_KEY,
+        exterior_scale_default=PROTOTYPE_EXTERIOR_SCALE_DEFAULT,
+        exterior_min_buildings_default=PROTOTYPE_EXTERIOR_MIN_BUILDINGS_DEFAULT,
+        exterior_max_buildings_default=PROTOTYPE_EXTERIOR_MAX_BUILDINGS_DEFAULT,
+    )
 
     active_preset_label = None
     city_summary_label = None
@@ -454,7 +304,14 @@ def _build_prototype_page() -> None:
     def _refresh_city_context(city_key: str | None = None) -> dict[str, object]:
         if city_key is None:
             city_key = str(state.get("city_key") or DEFAULT_CITY_KEY)
-        context = _compute_city_context(state["city_buildings_config"], str(city_key))
+        context = _compute_city_context(
+            state["city_buildings_config"],
+            str(city_key),
+            default_city_key=DEFAULT_CITY_KEY,
+            exterior_scale_default=PROTOTYPE_EXTERIOR_SCALE_DEFAULT,
+            exterior_min_buildings_default=PROTOTYPE_EXTERIOR_MIN_BUILDINGS_DEFAULT,
+            exterior_max_buildings_default=PROTOTYPE_EXTERIOR_MAX_BUILDINGS_DEFAULT,
+        )
         state["city_key"] = str(context.get("city_key") or DEFAULT_CITY_KEY)
         state["city_context"] = context
         return context
@@ -1219,6 +1076,7 @@ def _build_prototype_page() -> None:
                 value=state["city_key"],
                 on_change=lambda e: set_city(str(e.value or state["city_key"])),
             ).props("outlined dense")
+
         active_preset_label = ui.label("").classes("text-xs opacity-70")
         city_summary_label = ui.label("").classes("text-xs opacity-70")
 

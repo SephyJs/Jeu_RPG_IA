@@ -1,0 +1,7 @@
+{
+  "id": "quartier_spirituel_01",
+  "title": "Quartier spirituel - Allee des cierges",
+  "narrator_text": "Ataryxia : Encens, priere et silence; chaque pas semble pese par les dieux.",
+  "npcs": ["Pelerin", "Clerc", "Veuve en deuil"],
+  "choices": []
+}

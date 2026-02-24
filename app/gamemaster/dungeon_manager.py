@@ -45,6 +45,9 @@ class DungeonManager:
     def start_run(self, anchor: str, profile: dict) -> dict:
         total_floors = random.randint(10, 25)
         floors = [self._build_floor_event(profile, i + 1) for i in range(total_floors)]
+        if floors:
+            floors[-1] = self._build_boss_event(profile, total_floors)
+        relic = self._roll_run_relic()
         return {
             "anchor": anchor,
             "dungeon_name": str(profile.get("name") or f"Donjon de {anchor}"),
@@ -54,6 +57,7 @@ class DungeonManager:
             "current_floor": 0,
             "floors": floors,
             "completed": False,
+            "run_relic": relic,
         }
 
     def advance_floor(self, run: dict) -> dict | None:
@@ -139,21 +143,53 @@ class DungeonManager:
             name = random.choice(monsters) if monsters else random.choice([
                 "Goule d'obsidienne", "Sentinelle déchue", "Araignée cendreuse", "Chevalier sans visage"
             ])
-            text = f"Étage {floor}: Un {name} bloque le passage. Vous l'abattez après un combat brutal."
-            return {"floor": floor, "type": "monster", "name": name, "text": text}
+            monster_id = self._monster_id_from_name(name)
+            text = f"Étage {floor}: Un {name} bloque le passage et se jette sur vous."
+            return {"floor": floor, "type": "monster", "name": name, "monster_id": monster_id, "text": text}
 
         if kind == "mimic":
             lure = random.choice(treasures) if treasures else random.choice([
                 "coffre runique", "reliquaire doré", "urne scellée", "sac de gemmes"
             ])
-            text = f"Étage {floor}: Un {lure} vous attire... puis révèle ses crocs. C'était un mimic, et vous survivez de justesse."
-            return {"floor": floor, "type": "mimic", "name": "Mimic", "loot_lure": lure, "text": text}
+            text = f"Étage {floor}: Un {lure} vous attire... puis révèle ses crocs. C'était un mimic."
+            return {"floor": floor, "type": "mimic", "name": "Mimic", "monster_id": "mimic", "loot_lure": lure, "text": text}
 
         loot = random.choice(treasures) if treasures else random.choice([
             "anneau gravé", "potion d'ombre", "bourse de pièces noires", "fragment ancien"
         ])
         text = f"Étage {floor}: Vous découvrez un trésor: {loot}."
         return {"floor": floor, "type": "treasure", "loot": loot, "text": text}
+
+    def _build_boss_event(self, profile: dict, floor: int) -> dict:
+        monsters = profile.get("monster_pool") if isinstance(profile.get("monster_pool"), list) else []
+        treasures = profile.get("treasure_pool") if isinstance(profile.get("treasure_pool"), list) else []
+        base = random.choice(monsters) if monsters else "Seigneur spectral"
+        boss_title = random.choice(
+            [
+                "Seigneur",
+                "Gardien",
+                "Tyran",
+                "Souverain",
+                "Archonte",
+            ]
+        )
+        boss_name = f"{boss_title} {base}".strip()
+        monster_id = self._monster_id_from_name(base)
+        boss_treasure = random.choice(treasures) if treasures else "relique de domination"
+        text = (
+            f"Étage {floor}: Boss final! {boss_name} vous barre la route. "
+            f"Il protège jalousement {boss_treasure}."
+        )
+        return {
+            "floor": floor,
+            "type": "boss",
+            "name": boss_name,
+            "base_monster_name": base,
+            "monster_id": monster_id,
+            "loot": boss_treasure,
+            "text": text,
+            "boss": True,
+        }
 
     def _profile_prompt(self, anchor: str) -> str:
         schema = {
@@ -193,9 +229,15 @@ class DungeonManager:
         }
 
     def _anchor_key(self, anchor: str) -> str:
-        raw = unicodedata.normalize("NFKD", (anchor or "").strip()).encode("ascii", "ignore").decode("ascii")
+        return self._slug((anchor or "").strip(), default="zone")
+
+    def _monster_id_from_name(self, name: str) -> str:
+        return self._slug((name or "").strip(), default="monster")
+
+    def _slug(self, raw_text: str, *, default: str) -> str:
+        raw = unicodedata.normalize("NFKD", raw_text).encode("ascii", "ignore").decode("ascii")
         slug = re.sub(r"[^a-z0-9]+", "_", raw.lower()).strip("_")
-        return slug or "zone"
+        return slug or default
 
     def _path_for(self, anchor_key: str) -> Path:
         return self.storage_dir / f"{anchor_key}.json"
@@ -234,3 +276,36 @@ class DungeonManager:
         if start != -1 and end != -1 and end > start:
             return s[start:end + 1]
         return "{}"
+
+    def _roll_run_relic(self) -> dict:
+        pool = [
+            {
+                "id": "relique_cendre",
+                "name": "Relique de cendre",
+                "effect": "attack",
+                "bonus": 2,
+                "description": "Augmente vos jets offensifs en donjon.",
+            },
+            {
+                "id": "relique_garde",
+                "name": "Relique de garde",
+                "effect": "defense",
+                "bonus": 2,
+                "description": "Renforce votre defense contre les monstres.",
+            },
+            {
+                "id": "relique_sang",
+                "name": "Relique de sang",
+                "effect": "max_hp",
+                "bonus": 6,
+                "description": "Accorde une reserve de vitalite temporaire.",
+            },
+            {
+                "id": "relique_flux",
+                "name": "Relique du flux",
+                "effect": "heal",
+                "bonus": 2,
+                "description": "Ameliore les soins pendant l'expedition.",
+            },
+        ]
+        return dict(random.choice(pool))

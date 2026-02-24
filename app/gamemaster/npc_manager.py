@@ -155,6 +155,51 @@ _SPECIES_BY_ROLE_HINTS = (
     ({"aubergiste", "marchand", "tavernier", "taverne"}, [("humain", 50), ("nain", 15), ("elfe", 15), ("homme-bête", 10), ("gobelin", 10)]),
 )
 
+_POSITIVE_SOCIAL_WORDS = {
+    "merci",
+    "s il vous plait",
+    "s'il vous plait",
+    "svp",
+    "bonjour",
+    "bonsoir",
+    "salut",
+    "pardon",
+    "desole",
+    "désolé",
+    "aider",
+    "aide",
+    "respect",
+    "gentil",
+    "achat",
+    "acheter",
+    "payer",
+    "cadeau",
+    "donner",
+}
+
+_NEGATIVE_SOCIAL_WORDS = {
+    "idiot",
+    "imbecile",
+    "imbécile",
+    "stupide",
+    "nul",
+    "ta gueule",
+    "tais toi",
+    "menace",
+    "voler",
+    "vole",
+    "arnaque",
+    "arnaquer",
+    "frapper",
+    "tuer",
+    "attaque",
+    "deteste",
+    "déteste",
+    "haine",
+}
+
+_DOMINANCE_STYLES = {"soft", "manipulative", "aggressive", "cold"}
+
 
 def normalize_npc_key(name: str) -> str:
     raw = unicodedata.normalize("NFKD", (name or "").strip()).encode("ascii", "ignore").decode("ascii")
@@ -215,10 +260,347 @@ def profile_summary_line(profile: dict, fallback_label: str) -> str:
     species = str(identity.get("species") or "").strip()
     gender = str(identity.get("gender") or "").strip()
     flags = profile.get("dynamic_flags", {}) if isinstance(profile, dict) else {}
-    mood = str(flags.get("current_mood") or "neutre").strip()
+    emotional_state = profile.get("emotional_state", {}) if isinstance(profile, dict) else {}
+    mood = str(emotional_state.get("dominant_emotion") or flags.get("current_mood") or "neutre").strip()
+    tension = profile_tension_level(profile)
+    corruption = profile_corruption_level(profile)
     identity_bits = [x for x in (species, gender) if x]
     identity_suffix = f" - {', '.join(identity_bits)}" if identity_bits else ""
-    return f"{name} ({role}{identity_suffix}) | humeur: {mood}"
+    return (
+        f"{name} ({role}{identity_suffix}) | humeur: {mood}"
+        f" | tension: {tension_tier_label(tension)} ({tension})"
+        f" | corruption: {corruption}"
+    )
+
+
+def profile_tension_level(profile: dict) -> int:
+    if not isinstance(profile, dict):
+        return 0
+    return _clamp_int(profile.get("tension_level"), 0, 100, 20)
+
+
+def tension_tier_label(value: int) -> str:
+    level = max(0, min(100, int(value)))
+    if level >= 90:
+        return "rupture"
+    if level >= 70:
+        return "haute"
+    if level >= 35:
+        return "moyenne"
+    return "faible"
+
+
+def profile_morale_level(profile: dict) -> int:
+    if not isinstance(profile, dict):
+        return 50
+    return _clamp_int(profile.get("morale"), 0, 100, 55)
+
+
+def profile_aggressiveness_level(profile: dict) -> int:
+    if not isinstance(profile, dict):
+        return 35
+    return _clamp_int(profile.get("aggressiveness"), 0, 100, 35)
+
+
+def profile_corruption_level(profile: dict) -> int:
+    if not isinstance(profile, dict):
+        return 30
+    return _clamp_int(profile.get("corruption_level"), 0, 100, 30)
+
+
+def profile_attraction_for_player(profile: dict, player_id: str) -> int:
+    if not isinstance(profile, dict):
+        return 0
+    attraction = profile.get("attraction_map") if isinstance(profile.get("attraction_map"), dict) else {}
+    key = str(player_id or "").strip()
+    if not key:
+        return 0
+    return _clamp_int(attraction.get(key), 0, 100, 0)
+
+
+def normalize_profile_extensions_in_place(profile: dict, fallback_label: str = "PNJ") -> None:
+    if not isinstance(profile, dict):
+        return
+
+    role = str(profile.get("role") or fallback_label or "PNJ").strip() or "PNJ"
+    raw_agenda = str(profile.get("agenda_secret") or "").strip()
+    if not raw_agenda:
+        secret_rows = profile.get("secrets") if isinstance(profile.get("secrets"), list) else []
+        if secret_rows:
+            raw_agenda = str(secret_rows[0] or "").strip()
+    if not raw_agenda:
+        raw_agenda = f"Obtenir un avantage discret lie a {role}."
+    profile["agenda_secret"] = raw_agenda[:180]
+
+    needs = profile.get("needs") if isinstance(profile.get("needs"), list) else []
+    fears = profile.get("fears") if isinstance(profile.get("fears"), list) else []
+    besoin = str(profile.get("besoin") or "").strip()
+    peur = str(profile.get("peur") or "").strip()
+    if not besoin:
+        besoin = str(needs[0] or "").strip() if needs else "Stabiliser sa situation"
+    if not peur:
+        peur = str(fears[0] or "").strip() if fears else "Perdre le controle de la situation"
+    profile["besoin"] = besoin[:120]
+    profile["peur"] = peur[:120]
+
+    rival_raw = profile.get("rival_id")
+    rival_id = str(rival_raw or "").strip()
+    if not rival_id:
+        relations = profile.get("relations") if isinstance(profile.get("relations"), dict) else {}
+        enemies = relations.get("enemies") if isinstance(relations.get("enemies"), list) else []
+        rival_id = str(enemies[0] or "").strip() if enemies else ""
+    profile["rival_id"] = rival_id[:120] if rival_id else None
+
+    traits_raw = profile.get("traits")
+    traits: list[str] = []
+    if isinstance(traits_raw, str):
+        traits_raw = [x.strip() for x in re.split(r"[;,]", traits_raw) if x.strip()]
+    if isinstance(traits_raw, list):
+        seen: set[str] = set()
+        for row in traits_raw:
+            text = re.sub(r"\s+", " ", str(row or "")).strip()
+            if not text:
+                continue
+            key = _normalize_role_text(text)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            traits.append(text[:50])
+    if len(traits) < 3:
+        defaults = ["prudent", "observateur", "calculateur", "loyal", "fier", "cynique"]
+        for row in defaults:
+            if len(traits) >= 3:
+                break
+            if row in traits:
+                continue
+            traits.append(row)
+    profile["traits"] = traits[:6]
+
+    profile["tension_level"] = _clamp_int(profile.get("tension_level"), 0, 100, 20)
+    profile["morale"] = _clamp_int(profile.get("morale"), 0, 100, 55)
+    profile["aggressiveness"] = _clamp_int(profile.get("aggressiveness"), 0, 100, 35)
+    profile["corruption_level"] = _clamp_int(profile.get("corruption_level"), 0, 100, 30)
+
+    dominance_style = str(profile.get("dominance_style") or "").strip().casefold()
+    if dominance_style not in _DOMINANCE_STYLES:
+        if profile_aggressiveness_level(profile) >= 75:
+            dominance_style = "aggressive"
+        elif profile_corruption_level(profile) >= 70:
+            dominance_style = "manipulative"
+        elif profile_tension_level(profile) >= 65:
+            dominance_style = "cold"
+        else:
+            dominance_style = "soft"
+    profile["dominance_style"] = dominance_style
+
+    attraction_raw = profile.get("attraction_map")
+    if not isinstance(attraction_raw, dict):
+        attraction_raw = {}
+    attraction_map: dict[str, int] = {}
+    for key, value in list(attraction_raw.items())[:40]:
+        player_key = re.sub(r"\s+", " ", str(key or "")).strip()[:80]
+        if not player_key:
+            continue
+        attraction_map[player_key] = _clamp_int(value, 0, 100, 0)
+    profile["attraction_map"] = attraction_map
+
+    truth = profile.get("truth_state") if isinstance(profile.get("truth_state"), dict) else {}
+    known = truth.get("known_secrets")
+    if isinstance(known, str):
+        known = [known]
+    known_list = []
+    if isinstance(known, list):
+        seen_known: set[str] = set()
+        for row in known[:16]:
+            text = re.sub(r"\s+", " ", str(row or "")).strip()
+            if not text:
+                continue
+            key = _normalize_role_text(text)
+            if not key or key in seen_known:
+                continue
+            seen_known.add(key)
+            known_list.append(text[:160])
+
+    active_lies = truth.get("active_lies")
+    if not isinstance(active_lies, list):
+        active_lies = []
+    sanitized_lies: list[dict] = []
+    for row in active_lies[:8]:
+        if not isinstance(row, dict):
+            continue
+        sanitized_lies.append(
+            {
+                "id": str(row.get("id") or "").strip()[:80],
+                "statement": str(row.get("statement") or "").strip()[:200],
+                "expose_condition": str(row.get("expose_condition") or "").strip()[:200],
+                "created_at": str(row.get("created_at") or "").strip()[:40],
+            }
+        )
+
+    blacklist_until = _clamp_int(truth.get("blacklist_until_minutes"), 0, 99999999, 0)
+    truth["known_secrets"] = known_list
+    truth["active_lies"] = sanitized_lies
+    truth["mensonge_actif"] = truth.get("mensonge_actif") if isinstance(truth.get("mensonge_actif"), dict) else {}
+    truth["last_reveal_at"] = str(truth.get("last_reveal_at") or "").strip()[:40]
+    truth["blacklist_until_minutes"] = blacklist_until
+    profile["truth_state"] = truth
+
+
+def apply_tension_delta(profile: dict, *, delta: int, reason: str = "") -> tuple[int, int]:
+    if not isinstance(profile, dict):
+        return 0, 0
+    old = profile_tension_level(profile)
+    new = _clamp_int(old + int(delta), 0, 100, old)
+    profile["tension_level"] = new
+    truth = profile.get("truth_state") if isinstance(profile.get("truth_state"), dict) else {}
+    if reason:
+        truth["last_tension_reason"] = str(reason)[:180]
+    profile["truth_state"] = truth
+    return old, new
+
+
+def apply_attraction_delta(profile: dict, *, player_id: str, delta: int, reason: str = "") -> tuple[int, int]:
+    if not isinstance(profile, dict):
+        return 0, 0
+    key = re.sub(r"\s+", " ", str(player_id or "")).strip()
+    if not key:
+        return 0, 0
+    attraction = profile.get("attraction_map") if isinstance(profile.get("attraction_map"), dict) else {}
+    old = _clamp_int(attraction.get(key), 0, 100, 0)
+    new = _clamp_int(old + int(delta), 0, 100, old)
+    attraction[key] = new
+    profile["attraction_map"] = attraction
+    truth = profile.get("truth_state") if isinstance(profile.get("truth_state"), dict) else {}
+    if reason:
+        truth["last_attraction_reason"] = str(reason)[:180]
+    profile["truth_state"] = truth
+    return old, new
+
+
+def is_npc_blacklisted(profile: dict, *, world_time_minutes: int) -> bool:
+    if not isinstance(profile, dict):
+        return False
+    truth = profile.get("truth_state") if isinstance(profile.get("truth_state"), dict) else {}
+    until = _clamp_int(truth.get("blacklist_until_minutes"), 0, 99999999, 0)
+    return until > max(0, int(world_time_minutes))
+
+
+def set_npc_blacklist(profile: dict, *, until_world_time_minutes: int) -> None:
+    if not isinstance(profile, dict):
+        return
+    truth = profile.get("truth_state") if isinstance(profile.get("truth_state"), dict) else {}
+    truth["blacklist_until_minutes"] = max(0, int(until_world_time_minutes))
+    profile["truth_state"] = truth
+
+
+def _social_sentiment_score(text: str) -> int:
+    norm = _normalize_role_text(text)
+    if not norm:
+        return 0
+    score = 0
+    for word in _POSITIVE_SOCIAL_WORDS:
+        if _normalize_role_text(word) in norm:
+            score += 1
+    for word in _NEGATIVE_SOCIAL_WORDS:
+        if _normalize_role_text(word) in norm:
+            score -= 1
+    return score
+
+
+def _clamp_int(value: object, minimum: int, maximum: int, default: int) -> int:
+    try:
+        raw = int(value)
+    except (TypeError, ValueError):
+        raw = int(default)
+    return max(minimum, min(maximum, raw))
+
+
+def update_profile_emotional_state(
+    profile: dict,
+    *,
+    user_text: str,
+    npc_reply: str = "",
+    event_hint: str = "",
+) -> bool:
+    if not isinstance(profile, dict):
+        return False
+
+    emotional = profile.get("emotional_state", {}) if isinstance(profile.get("emotional_state"), dict) else {}
+    before = dict(emotional)
+
+    trust = _clamp_int(emotional.get("trust_player"), -100, 100, 0)
+    stress = _clamp_int(emotional.get("stress"), 0, 100, 30)
+    affection = _clamp_int(emotional.get("affection"), 0, 100, 20)
+    curiosity = _clamp_int(emotional.get("curiosity"), 0, 100, 40)
+
+    score = _social_sentiment_score(user_text)
+    if event_hint:
+        score += _social_sentiment_score(event_hint)
+        hint_norm = _normalize_role_text(event_hint)
+        if "trade" in hint_norm and "ok" in hint_norm:
+            score += 1
+        if "not_enough_gold" in hint_norm or "not_owned" in hint_norm:
+            score -= 1
+
+    if "?" in str(user_text or ""):
+        curiosity = min(100, curiosity + 3)
+
+    trust = _clamp_int(trust + (score * 4), -100, 100, trust)
+    stress = _clamp_int(stress - (score * 3), 0, 100, stress)
+    affection = _clamp_int(affection + max(0, score * 2), 0, 100, affection)
+
+    if score < 0:
+        stress = _clamp_int(stress + abs(score) * 2, 0, 100, stress)
+    if score > 0:
+        stress = _clamp_int(stress - score, 0, 100, stress)
+
+    reply_norm = _normalize_role_text(npc_reply)
+    if any(word in reply_norm for word in ("colere", "froid", "mefie", "méfie", "degage", "dégage")):
+        stress = _clamp_int(stress + 4, 0, 100, stress)
+    if any(word in reply_norm for word in ("merci", "bienvenue", "calme", "confiance", "heureux")):
+        affection = _clamp_int(affection + 3, 0, 100, affection)
+
+    if stress >= 78 and trust <= -25:
+        dominant = "hostile"
+    elif stress >= 70:
+        dominant = "tendu"
+    elif trust <= -40:
+        dominant = "mefiant"
+    elif trust >= 50 and affection >= 45:
+        dominant = "chaleureux"
+    elif curiosity >= 65:
+        dominant = "curieux"
+    elif affection >= 55:
+        dominant = "bienveillant"
+    else:
+        dominant = "neutre"
+
+    if trust >= 45:
+        toward_player = "amical"
+    elif trust <= -30:
+        toward_player = "hostile"
+    elif trust <= -10:
+        toward_player = "distant"
+    else:
+        toward_player = "neutre"
+
+    emotional["dominant_emotion"] = dominant
+    emotional["toward_player"] = toward_player
+    emotional["trust_player"] = trust
+    emotional["stress"] = stress
+    emotional["affection"] = affection
+    emotional["curiosity"] = curiosity
+    emotional["last_trigger"] = str(user_text or "")[:180]
+    profile["emotional_state"] = emotional
+
+    flags = profile.get("dynamic_flags", {}) if isinstance(profile.get("dynamic_flags"), dict) else {}
+    flags["current_mood"] = dominant
+    flags["is_angry"] = dominant in {"hostile", "tendu"} or trust <= -35
+    flags["is_hostile"] = dominant == "hostile" or trust <= -45
+    flags["relation_score"] = _clamp_int(trust, -100, 100, 0)
+    profile["dynamic_flags"] = flags
+
+    return before != emotional
 
 
 class NPCIdentity(BaseModel):
@@ -254,6 +636,16 @@ class NPCDynamicFlags(BaseModel):
     is_quest_giver: bool = False
 
 
+class NPCEmotionalState(BaseModel):
+    dominant_emotion: str = "neutre"
+    toward_player: str = "neutre"
+    trust_player: int = 0
+    stress: int = 30
+    affection: int = 20
+    curiosity: int = 40
+    last_trigger: str = ""
+
+
 class NPCWorldAnchor(BaseModel):
     location_id: str
     location_title: str
@@ -273,10 +665,26 @@ class NPCProfile(BaseModel):
     backstory: str = ""
     knowledge_base: list[str] = Field(default_factory=list)
     goals: list[str] = Field(default_factory=list)
+    desires: list[str] = Field(default_factory=list)
+    needs: list[str] = Field(default_factory=list)
+    fears: list[str] = Field(default_factory=list)
+    agenda_secret: str = ""
+    besoin: str = ""
+    peur: str = ""
+    rival_id: str | None = None
+    traits: list[str] = Field(default_factory=list)
+    tension_level: int = 20
+    morale: int = 55
+    aggressiveness: int = 35
+    corruption_level: int = 30
+    attraction_map: dict[str, int] = Field(default_factory=dict)
+    dominance_style: str = "soft"
+    truth_state: dict[str, Any] = Field(default_factory=dict)
     secrets: list[str] = Field(default_factory=list)
     quest_hooks: list[str] = Field(default_factory=list)
     relations: dict[str, list[str]] = Field(default_factory=lambda: {"allies": [], "enemies": []})
     dynamic_flags: NPCDynamicFlags = Field(default_factory=NPCDynamicFlags)
+    emotional_state: NPCEmotionalState = Field(default_factory=NPCEmotionalState)
 
 
 class NPCProfileManager:
@@ -520,6 +928,38 @@ class NPCProfileManager:
             style = z.get("dialogue_style", {}) if isinstance(z.get("dialogue_style"), dict) else {}
             flags = z.get("flags", {}) if isinstance(z.get("flags"), dict) else {}
             relations = z.get("relations", {}) if isinstance(z.get("relations"), dict) else {}
+            raw_desires = (
+                z.get("desires")
+                if isinstance(z.get("desires"), list)
+                else z.get("envies")
+                if isinstance(z.get("envies"), list)
+                else z.get("goals")
+                if isinstance(z.get("goals"), list)
+                else []
+            )
+            raw_needs = (
+                z.get("needs")
+                if isinstance(z.get("needs"), list)
+                else z.get("besoins")
+                if isinstance(z.get("besoins"), list)
+                else []
+            )
+            raw_fears = (
+                z.get("fears")
+                if isinstance(z.get("fears"), list)
+                else z.get("peurs")
+                if isinstance(z.get("peurs"), list)
+                else []
+            )
+            raw_sentiment = (
+                z.get("sentiment")
+                if isinstance(z.get("sentiment"), str)
+                else z.get("emotion")
+                if isinstance(z.get("emotion"), str)
+                else z.get("mood")
+                if isinstance(z.get("mood"), str)
+                else "neutre"
+            )
             candidate = {
                 "npc_key": npc_key,
                 "label": npc_label,
@@ -553,6 +993,21 @@ class NPCProfileManager:
                 "backstory": "",
                 "knowledge_base": [],
                 "goals": [],
+                "desires": raw_desires,
+                "needs": raw_needs,
+                "fears": raw_fears,
+                "agenda_secret": str(z.get("agenda_secret") or z.get("agenda") or z.get("hidden_goal") or ""),
+                "besoin": str(z.get("besoin") or z.get("need") or ""),
+                "peur": str(z.get("peur") or z.get("fear") or ""),
+                "rival_id": str(z.get("rival_id") or z.get("rival") or "").strip() or None,
+                "traits": z.get("traits") if isinstance(z.get("traits"), list) else z.get("traits", []),
+                "tension_level": _clamp_int(z.get("tension_level"), 0, 100, 20),
+                "morale": _clamp_int(z.get("morale"), 0, 100, 55),
+                "aggressiveness": _clamp_int(z.get("aggressiveness"), 0, 100, 35),
+                "corruption_level": _clamp_int(z.get("corruption_level"), 0, 100, 30),
+                "attraction_map": z.get("attraction_map") if isinstance(z.get("attraction_map"), dict) else {},
+                "dominance_style": str(z.get("dominance_style") or "").strip().casefold(),
+                "truth_state": z.get("truth_state") if isinstance(z.get("truth_state"), dict) else {},
                 "secrets": [],
                 "quest_hooks": z.get("quest_hooks") if isinstance(z.get("quest_hooks"), list) else [],
                 "relations": {
@@ -567,6 +1022,15 @@ class NPCProfileManager:
                     "is_hostile": bool(flags.get("is_hostile", False)),
                     "is_bribeable": bool(flags.get("is_bribeable", False)),
                     "is_quest_giver": bool(flags.get("is_quest_giver", False)),
+                },
+                "emotional_state": {
+                    "dominant_emotion": str(raw_sentiment or "neutre"),
+                    "toward_player": "neutre",
+                    "trust_player": 0,
+                    "stress": 30,
+                    "affection": 20,
+                    "curiosity": 40,
+                    "last_trigger": "",
                 },
             }
             self._normalize_profile_in_place(
@@ -646,10 +1110,39 @@ class NPCProfileManager:
             backstory=f"Installé à {location_title}, {npc_label} a appris à survivre entre rumeurs et dettes.",
             knowledge_base=[f"Connaît bien {location_title}."],
             goals=["Protéger ses intérêts", "Éviter les ennuis"],
+            desires=["Améliorer sa situation", "Garder sa place dans la ville"],
+            needs=["Sécurité", "Revenus stables", "Repos"],
+            fears=["Perdre son statut", "Attirer une mauvaise dette"],
+            agenda_secret=f"Gagner du levier social autour de {location_title}.",
+            besoin="Stabiliser ses revenus sans se mettre a dos la garde.",
+            peur="Que ses arrangements cachés soient reveles.",
+            rival_id=None,
+            traits=["prudent", "observateur", "calculateur"],
+            tension_level=20,
+            morale=55,
+            aggressiveness=35,
+            corruption_level=30,
+            attraction_map={},
+            dominance_style="soft",
+            truth_state={
+                "known_secrets": [],
+                "active_lies": [],
+                "mensonge_actif": {},
+                "last_reveal_at": "",
+                "blacklist_until_minutes": 0,
+            },
             secrets=["Garde une information compromettante sur un notable local."],
             quest_hooks=["Peut orienter le joueur vers une piste en échange d'un service."],
             relations={"allies": [], "enemies": []},
             dynamic_flags=NPCDynamicFlags(current_mood="neutre"),
+            emotional_state=NPCEmotionalState(
+                dominant_emotion="neutre",
+                toward_player="neutre",
+                trust_player=0,
+                stress=30,
+                affection=20,
+                curiosity=40,
+            ),
         )
 
     def _prompt_npc_profile_json(
@@ -691,6 +1184,27 @@ class NPCProfileManager:
             "backstory": "Passé du PNJ en 2-3 phrases",
             "knowledge_base": ["connaissance_1"],
             "goals": ["objectif_1"],
+            "desires": ["envie_1", "envie_2"],
+            "needs": ["besoin_1", "besoin_2"],
+            "fears": ["peur_1"],
+            "agenda_secret": "Objectif cache du PNJ en une phrase.",
+            "besoin": "Besoin principal actuel du PNJ.",
+            "peur": "Crainte principale du PNJ.",
+            "rival_id": "id_ou_nom_du_rival_ou_null",
+            "traits": ["trait_1", "trait_2", "trait_3"],
+            "tension_level": 20,
+            "morale": 55,
+            "aggressiveness": 35,
+            "corruption_level": 30,
+            "attraction_map": {"player_id": 0},
+            "dominance_style": "soft|manipulative|aggressive|cold",
+            "truth_state": {
+                "known_secrets": [],
+                "active_lies": [],
+                "mensonge_actif": {},
+                "last_reveal_at": "",
+                "blacklist_until_minutes": 0,
+            },
             "secrets": ["secret_1"],
             "quest_hooks": ["hook_1"],
             "relations": {"allies": ["Nom"], "enemies": ["Nom"]},
@@ -703,6 +1217,15 @@ class NPCProfileManager:
                 "is_bribeable": False,
                 "is_quest_giver": False,
             },
+            "emotional_state": {
+                "dominant_emotion": "neutre|mefiant|curieux|tendu|chaleureux|hostile",
+                "toward_player": "neutre|amical|distant|hostile",
+                "trust_player": 0,
+                "stress": 30,
+                "affection": 20,
+                "curiosity": 40,
+                "last_trigger": "",
+            },
         }
         return (
             "Tu es un générateur de fiches PNJ dark-fantasy.\n"
@@ -713,6 +1236,13 @@ class NPCProfileManager:
             "Le champ identity.gender doit toujours être explicite (pas 'inconnu').\n"
             "Le champ identity.species doit refléter un style fantasy cohérent avec le PNJ.\n"
             "Varie les espèces fantasy d'un PNJ à l'autre, évite de répondre toujours 'humain'.\n"
+            "Remplis aussi desires, needs, fears et emotional_state pour donner une vraie vie au PNJ.\n"
+            "Remplis obligatoirement agenda_secret, besoin, peur, rival_id, traits et truth_state.\n"
+            "traits doit contenir 3 a 6 elements courts.\n"
+            "tension_level doit rester entre 0 et 100.\n"
+            "morale, aggressiveness, corruption_level sont des scores 0..100.\n"
+            "dominance_style doit etre soft|manipulative|aggressive|cold.\n"
+            "attraction_map est un dictionnaire de scores 0..100 par player_id.\n"
             "Contraintes: garder un ton cohérent jeu médiéval sombre, pas de contenu méta.\n"
             "Schéma attendu:\n"
             f"{json.dumps(schema, ensure_ascii=False)}\n"
@@ -743,6 +1273,13 @@ class NPCProfileManager:
         profile["world_anchor"] = world_anchor
 
         self._normalize_identity_in_place(
+            profile,
+            fallback_label=fallback_label,
+            npc_key=npc_key,
+            location_id=anchor_id,
+            location_title=anchor_title,
+        )
+        self._normalize_life_in_place(
             profile,
             fallback_label=fallback_label,
             npc_key=npc_key,
@@ -812,6 +1349,137 @@ class NPCProfileManager:
             )
         identity["species"] = species
         profile["identity"] = identity
+
+    def _normalize_life_in_place(
+        self,
+        profile: dict,
+        *,
+        fallback_label: str,
+        npc_key: str,
+        location_id: str,
+        location_title: str,
+    ) -> None:
+        role_hint = str(profile.get("role") or fallback_label or "").strip()
+        identity = profile.get("identity", {}) if isinstance(profile.get("identity"), dict) else {}
+        species = str(identity.get("species") or "humain").strip() or "humain"
+        rng = random.Random(f"life|{npc_key}|{location_id}|{role_hint}|{species}")
+
+        desires = self._normalize_string_list(profile.get("desires"))
+        if not desires:
+            desires = self._default_desires(role_hint=role_hint, species=species, location_title=location_title, rng=rng)
+        profile["desires"] = desires[:5]
+
+        needs = self._normalize_string_list(profile.get("needs"))
+        if not needs:
+            needs = self._default_needs(role_hint=role_hint, species=species, rng=rng)
+        profile["needs"] = needs[:5]
+
+        fears = self._normalize_string_list(profile.get("fears"))
+        if not fears:
+            fears = self._default_fears(role_hint=role_hint, species=species, rng=rng)
+        profile["fears"] = fears[:4]
+
+        emotional = profile.get("emotional_state", {}) if isinstance(profile.get("emotional_state"), dict) else {}
+        dominant = str(emotional.get("dominant_emotion") or profile.get("dynamic_flags", {}).get("current_mood") or "neutre").strip() or "neutre"
+        toward_player = str(emotional.get("toward_player") or "neutre").strip() or "neutre"
+        emotional["dominant_emotion"] = dominant[:40]
+        emotional["toward_player"] = toward_player[:40]
+        emotional["trust_player"] = _clamp_int(emotional.get("trust_player"), -100, 100, 0)
+        emotional["stress"] = _clamp_int(emotional.get("stress"), 0, 100, rng.randint(22, 45))
+        emotional["affection"] = _clamp_int(emotional.get("affection"), 0, 100, rng.randint(12, 35))
+        emotional["curiosity"] = _clamp_int(emotional.get("curiosity"), 0, 100, rng.randint(28, 62))
+        emotional["last_trigger"] = str(emotional.get("last_trigger") or "")[:180]
+        profile["emotional_state"] = emotional
+
+        flags = profile.get("dynamic_flags", {}) if isinstance(profile.get("dynamic_flags"), dict) else {}
+        flags["current_mood"] = str(emotional.get("dominant_emotion") or flags.get("current_mood") or "neutre")[:40]
+        flags["relation_score"] = _clamp_int(flags.get("relation_score"), -100, 100, int(emotional["trust_player"]))
+        flags["is_angry"] = bool(flags.get("is_angry", False) or str(flags["current_mood"]).casefold() in {"hostile", "tendu"})
+        flags["is_hostile"] = bool(flags.get("is_hostile", False) or int(emotional["trust_player"]) <= -45)
+        profile["dynamic_flags"] = flags
+        normalize_profile_extensions_in_place(profile, fallback_label=fallback_label)
+
+    def _normalize_string_list(self, value: object) -> list[str]:
+        if isinstance(value, str):
+            value = [x.strip() for x in re.split(r"[;,]", value) if x.strip()]
+        if not isinstance(value, list):
+            return []
+        out: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            text = re.sub(r"\s+", " ", str(item or "")).strip()
+            if not text:
+                continue
+            key = _normalize_role_text(text)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            out.append(text[:120])
+        return out
+
+    def _default_desires(
+        self,
+        *,
+        role_hint: str,
+        species: str,
+        location_title: str,
+        rng: random.Random,
+    ) -> list[str]:
+        role = _normalize_role_text(role_hint)
+        shared = [
+            f"Consolider sa place a {location_title or 'la ville'}",
+            "Eviter de devenir dependant d'un puissant local",
+        ]
+        if any(k in role for k in ("forgeron", "forge", "artisan")):
+            return ["Produire une piece d'exception", "Trouver de meilleurs materiaux", *shared]
+        if any(k in role for k in ("aubergiste", "tavernier", "serveur")):
+            return ["Garder une clientele fidele", "Maintenir la paix entre clients", *shared]
+        if any(k in role for k in ("marchand", "vendeur", "boutique")):
+            return ["Augmenter ses marges sans perdre sa reputation", "Nouer des routes fiables", *shared]
+        if any(k in role for k in ("pretre", "pretresse", "temple", "soigneur")):
+            return ["Preserver son sanctuaire", "Aider sans s'epuiser", *shared]
+        species_hint = _normalize_role_text(species)
+        if "fee" in species_hint or "fée" in species:
+            return ["Proteger ses semblables", "Masquer ses veritables intentions", *shared]
+        if "dragon" in species_hint or "drake" in species_hint:
+            return ["Accroitre son influence", "Ne jamais paraitre faible", *shared]
+        rng.shuffle(shared)
+        return ["Ameliorer son quotidien", "Rester libre de ses choix", *shared]
+
+    def _default_needs(self, *, role_hint: str, species: str, rng: random.Random) -> list[str]:
+        role = _normalize_role_text(role_hint)
+        needs = ["Securite", "Revenus stables", "Repos"]
+        if any(k in role for k in ("marchand", "boutique", "forgeron", "artisan")):
+            needs.append("Materiaux et approvisionnement")
+        if any(k in role for k in ("aubergiste", "tavernier", "serveur")):
+            needs.append("Clients reguliers")
+        if any(k in role for k in ("garde", "mercenaire", "soldat")):
+            needs.append("Soutien de confiance")
+        if "fée" in species or "dragon" in species:
+            needs.append("Discretion")
+        unique: list[str] = []
+        for n in needs:
+            if n not in unique:
+                unique.append(n)
+        if len(unique) > 3:
+            tail = unique[3:]
+            rng.shuffle(tail)
+            unique = unique[:3] + tail
+        return unique[:5]
+
+    def _default_fears(self, *, role_hint: str, species: str, rng: random.Random) -> list[str]:
+        role = _normalize_role_text(role_hint)
+        fears = ["Perdre ses moyens de subsistance", "Etre trahi par un proche"]
+        if any(k in role for k in ("marchand", "boutique")):
+            fears.append("Subir un vol ou une escroquerie")
+        if any(k in role for k in ("aubergiste", "tavernier")):
+            fears.append("Voir son etablissement ruine")
+        if any(k in role for k in ("forgeron", "artisan")):
+            fears.append("Ne plus pouvoir exercer son savoir-faire")
+        if "dragon" in _normalize_role_text(species):
+            fears.append("Perdre son prestige")
+        rng.shuffle(fears)
+        return fears[:4]
 
     def _canonical_gender(self, value: object) -> str | None:
         raw = str(value or "").strip()

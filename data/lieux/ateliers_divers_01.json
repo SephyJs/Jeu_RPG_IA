@@ -1,0 +1,7 @@
+{
+  "id": "ateliers_divers_01",
+  "title": "Ateliers divers - Cour des artisans",
+  "narrator_text": "Ataryxia : Tanneur, tisserand et verrier travaillent cote a cote dans le vacarme.",
+  "npcs": ["Tanneur", "Menuisier", "Souffleuse de verre"],
+  "choices": []
+}

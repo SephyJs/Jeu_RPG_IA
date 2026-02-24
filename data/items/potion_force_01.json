@@ -1,0 +1,19 @@
+{
+  "id": "potion_force_01",
+  "name": "Potion de force",
+  "stack_max": 8,
+  "type": "consumable",
+  "slot": "",
+  "rarity": "uncommon",
+  "description": "Booster temporairement la puissance physique.",
+  "stat_bonuses": {},
+  "effects": [
+    {
+      "kind": "stat_buff",
+      "stat": "force",
+      "value": 2,
+      "duration_turns": 3
+    }
+  ],
+  "value_gold": 18
+}

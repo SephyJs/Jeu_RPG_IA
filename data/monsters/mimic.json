@@ -1,0 +1,29 @@
+{
+  "id": "mimic",
+  "name": "Mimic",
+  "aliases": ["coffre mimic", "faux coffre"],
+  "archetype": "trickster",
+  "tier": 2,
+  "description": "Un faux coffre vivant, agressif et imprevisible.",
+  "combat": {
+    "base_hp": 20,
+    "base_dc": 13,
+    "base_attack_bonus": 4,
+    "base_damage_min": 4,
+    "base_damage_max": 8,
+    "hp_per_floor": 1.2,
+    "dc_per_5_floors": 1,
+    "attack_per_6_floors": 1,
+    "damage_per_8_floors": 1
+  },
+  "boss_modifiers": {
+    "hp_mult": 1.5,
+    "damage_mult": 1.35,
+    "dc_bonus": 2,
+    "attack_bonus": 1
+  },
+  "media": {
+    "image": "",
+    "clip": ""
+  }
+}

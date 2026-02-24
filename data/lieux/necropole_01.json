@@ -1,0 +1,7 @@
+{
+  "id": "necropole_01",
+  "title": "Necropole - Catacombes de pierre",
+  "narrator_text": "Ataryxia : Le silence des tombes pese plus lourd que la nuit elle-meme.",
+  "npcs": ["Fossoyeuse", "Gardien des cryptes"],
+  "choices": []
+}

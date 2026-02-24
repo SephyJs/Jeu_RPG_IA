@@ -1,0 +1,7 @@
+{
+  "id": "quartier_magique_01",
+  "title": "Quartier magique - Cour des arcanes",
+  "narrator_text": "Ataryxia : Des runes brillent sur les dalles et l'air vibre de savoir interdit.",
+  "npcs": ["Apprentie mage", "Scribe runique", "Alchimiste itinerant"],
+  "choices": []
+}

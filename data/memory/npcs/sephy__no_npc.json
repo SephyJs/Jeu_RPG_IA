@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "npc_id": "sephy__no_npc",
+  "short": [
+    {
+      "ts": "2026-02-24T16:57:06.085614+00:00",
+      "role": "player",
+      "text": "j'utilise un livre de nécromancie",
+      "tags": [
+        "quartier_spirituel_-_allee_des_cierges",
+        "player"
+      ],
+      "importance": 0.5,
+      "turn_id": "3a1c8197-abf4-452a-9d52-28c21e61792c"
+    }
+  ],
+  "long": {
+    "facts": [],
+    "events": [],
+    "promises": [],
+    "debts": [],
+    "relationships": {
+      "player": {
+        "affinity": 0,
+        "notes": []
+      }
+    },
+    "summary": {
+      "ts": "2026-02-24T16:56:54.869886+00:00",
+      "text": "(aucun resume)"
+    }
+  },
+  "chunks": [],
+  "stats": {
+    "short_max": 60,
+    "chunk_target_turns": 40,
+    "last_compact_ts": ""
+  }
+}

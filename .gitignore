@@ -47,5 +47,7 @@ mes_videos_coupees/
 jeu_2D.zip
 projet_complet.txt
 VIDEO_PERFORMANCE_FIXES.md
-tools/
+tools/*
+!tools/check_texts.py
+!tools/inventory_texts.py
 prompt.txt

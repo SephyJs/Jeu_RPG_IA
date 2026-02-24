@@ -44,6 +44,22 @@ python3 -m app.main
 
 Puis ouvrir: `http://127.0.0.1:8080`
 
+Pages principales:
+- `http://127.0.0.1:8080/game`: jeu principal
+- `http://127.0.0.1:8080/studio`: editeur de contenu (PNJ, monstres, items, marchands, carte monde)
+
+Commandes chat utiles (dans `/game`):
+- `/quest list` : afficher les quetes actives
+- `/quest choose <quest_id> <option_id>` : choisir une branche de quete
+- `/craft list` : lister les recettes de craft
+- `/craft <recipe_id> [qty]` : fabriquer un objet
+- `/story` : afficher l'etat de l'arc principal en chapitres
+
+### Tests
+```bash
+python3 -m pytest -q
+```
+
 ## Mode Telegram (MVP)
 
 Le projet inclut un bot Telegram minimal pour discuter avec le jeu depuis l'app Telegram.
@@ -56,7 +72,9 @@ TELEGRAM_DEFAULT_SLOT=1
 TELEGRAM_SLOT_COUNT=3
 TELEGRAM_PROFILE_KEY=
 TELEGRAM_PROFILE_NAME=
+ATARYXIA_TELEGRAM_TOKEN_SECRET=
 ```
+`ATARYXIA_TELEGRAM_TOKEN_SECRET` est optionnel mais recommande: il sert a chiffrer les tokens Telegram stockes localement.
 
 ### 2) Lancer le bot
 ```bash
@@ -79,6 +97,15 @@ Le bot accepte aussi du texte libre pour dialoguer avec le PNJ actif et propose 
   - `/useprofile <profil_key>` bascule de profil
   - `/slot <n>` change de slot actif
   - `/creation` affiche l'etat de creation du personnage
+
+### 5) Lier un token depuis le chat du jeu (UI web)
+Depuis la zone de dialogue du jeu, un joueur connecte peut taper:
+- `/telegram <TOKEN_BOTFATHER>`: enregistre le token pour son profil et lance le bot
+- `/telegram status`: etat du bot lie a ce profil
+- `/telegram start`: demarre le bot avec la config deja enregistree
+- `/telegram stop`: arrete le bot pour ce profil
+- `/telegram slot <n>`: choisit le slot utilise par le bot
+- `/telegram clear`: supprime la config Telegram du profil
 
 ## Documentation
 - Guide complet: `README.txt`

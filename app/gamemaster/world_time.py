@@ -84,9 +84,3 @@ def format_fantasy_datetime(world_time_minutes: int) -> str:
     weekday = WEEKDAYS[weekday_index]
     period = time_period_label(world_time_minutes)
     return f"{weekday}, {day_in_month:02d} {month}, An {year} - {hour:02d}:{minute:02d} ({period})"
-
-
-def format_fantasy_time(world_time_minutes: int) -> str:
-    hour, minute = hour_minute(world_time_minutes)
-    return f"{hour:02d}:{minute:02d} ({time_period_label(world_time_minutes)})"
-

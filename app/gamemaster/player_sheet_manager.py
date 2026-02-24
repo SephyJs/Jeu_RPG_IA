@@ -5,6 +5,7 @@ import hashlib
 import json
 import random
 import re
+import unicodedata
 import uuid
 from pathlib import Path
 from typing import Any
@@ -49,6 +50,16 @@ _CREATION_BASE_STAT_VALUE = 5
 _CREATION_BONUS_POOL = 15
 _CREATION_MIN_BONUS = 2
 _CREATION_MAX_BONUS = 5
+
+_HEAL_REQUEST_RE = re.compile(
+    r"\b(soin|soins|soigne|soigner|soignez|gueri|guerir|guerison|heal|restaure|restaurer|remets|remettre)\b"
+)
+_HEAL_CONTEXT_RE = re.compile(
+    r"\b(temple|sanctuaire|chapelle|hospice|infirmer|gueriss|pretre|pretresse|soigneur|clerc|medec|diacre|acolyte)\b"
+)
+_HEAL_REQUEST_EXCLUDE_RE = re.compile(
+    r"\b(achat|acheter|achete|vente|vendre|vend|prix|combien|potion|elixir|elixir|marchand|boutique)\b"
+)
 
 
 class PlayerSheetManager:
@@ -169,6 +180,10 @@ class PlayerSheetManager:
         user_message: str,
         npc_reply: str,
         narration: str,
+        trade_context: dict | None = None,
+        trade_applied: bool = False,
+        player_name: str = "",
+        selected_npc_name: str = "",
     ) -> dict:
         if self.llm is None:
             return self._empty_progression()
@@ -177,6 +192,8 @@ class PlayerSheetManager:
         schema = {
             "xp_gain": 0,
             "reason": "raison courte",
+            "restore_hp_to_full": False,
+            "restore_hp": 0,
             "stat_deltas": {
                 "force": 0,
                 "intelligence": 0,
@@ -191,6 +208,16 @@ class PlayerSheetManager:
                 "mana_max": 0,
             },
         }
+        trade_payload = trade_context if isinstance(trade_context, dict) else {}
+        compact_trade = {
+            "applied": bool(trade_applied),
+            "action": str(trade_payload.get("action") or ""),
+            "status": str(trade_payload.get("status") or ""),
+            "item_id": str(trade_payload.get("item_id") or ""),
+            "item_name": str(trade_payload.get("item_name") or ""),
+            "qty_done": max(0, self._safe_int(trade_payload.get("qty_done"), 0)),
+            "gold_delta": self._safe_int(trade_payload.get("gold_delta"), 0),
+        }
         prompt = (
             "Tu es un moteur de progression RPG.\n"
             "Reponds en JSON valide UNIQUEMENT.\n"
@@ -198,12 +225,20 @@ class PlayerSheetManager:
             "Si c'est juste du bavardage sans enjeu, donne 0 partout.\n"
             "Gains tres modestes: xp_gain 0..6, chaque stat_delta 0..2.\n"
             "Pas de valeurs negatives.\n"
+            "Quand l'action est un soin/guerison: utiliser restore_hp (0..12) plutot que pv_max/mana_max.\n"
+            "Regle commerce stricte:\n"
+            "- Ne parle d'achat/vente/don/echange que si Commerce.applied=true ET Commerce.status='ok'.\n"
+            "- Si Commerce.applied=false, n'invente aucune transaction validee.\n"
+            "- Le joueur ne se parle pas a lui-meme: n'ecris jamais une raison du type 'question a <nom_joueur>'.\n"
             "Stats actuelles:\n"
             f"{json.dumps(stats, ensure_ascii=False)}\n"
             "Contexte tour:\n"
             f"- Joueur: {user_message}\n"
             f"- Reponse PNJ: {npc_reply}\n"
             f"- Narration: {narration}\n"
+            f"- Commerce: {json.dumps(compact_trade, ensure_ascii=False)}\n"
+            f"- Nom_joueur: {str(player_name or '').strip()}\n"
+            f"- PNJ_cible: {str(selected_npc_name or '').strip()}\n"
             "Schema attendu:\n"
             f"{json.dumps(schema, ensure_ascii=False)}\n"
         )
@@ -218,7 +253,34 @@ class PlayerSheetManager:
                 stop=None,
             )
             payload = json.loads(self._extract_json(raw))
-            return self._normalize_progression(payload)
+            normalized = self._normalize_progression(payload)
+            if not bool(trade_applied) and self._reason_mentions_trade(str(normalized.get("reason") or "")):
+                return self._empty_progression()
+            if not bool(trade_applied) and self._is_question_message(user_message):
+                return self._empty_progression()
+            if not self._is_question_message(user_message) and self._reason_mentions_question(
+                str(normalized.get("reason") or "")
+            ):
+                return self._empty_progression()
+            if self._reason_targets_player(
+                str(normalized.get("reason") or ""),
+                player_name=player_name,
+                selected_npc_name=selected_npc_name,
+            ):
+                return self._empty_progression()
+            sanitized = self._sanitize_progression_for_heal_service(
+                normalized,
+                user_message=user_message,
+                npc_reply=npc_reply,
+                narration=narration,
+                selected_npc_name=selected_npc_name,
+            )
+            return self._sanitize_progression_for_heal_action(
+                sanitized,
+                user_message=user_message,
+                npc_reply=npc_reply,
+                narration=narration,
+            )
         except Exception:
             return self._empty_progression()
 
@@ -263,6 +325,25 @@ class PlayerSheetManager:
             stats["pv"] = stats["pv_max"]
             stats["mana"] = stats["mana_max"]
             lines.append(f"Niveau +{level_ups}")
+
+        restore_hp = max(0, min(self._safe_int(progression.get("restore_hp"), 0), 40))
+        if restore_hp > 0 and not bool(progression.get("restore_hp_to_full", False)):
+            before_hp = max(0, self._safe_int(stats.get("pv"), 0))
+            stats["pv"] = min(self._safe_int(stats.get("pv_max"), before_hp), before_hp + restore_hp)
+            gained = max(0, stats["pv"] - before_hp)
+            if gained > 0:
+                lines.append(f"Soin +{gained} PV")
+            else:
+                lines.append("Soin (PV deja au maximum)")
+
+        if bool(progression.get("restore_hp_to_full", False)):
+            before_hp = max(0, self._safe_int(stats.get("pv"), 0))
+            stats["pv"] = self._safe_int(stats.get("pv_max"), before_hp)
+            gained = max(0, stats["pv"] - before_hp)
+            if gained > 0:
+                lines.append(f"Soin du temple +{gained} PV")
+            else:
+                lines.append("Soin du temple (PV deja au maximum)")
 
         stats["pv"] = min(max(1, self._safe_int(stats.get("pv"), 20)), self._safe_int(stats.get("pv_max"), 20))
         stats["mana"] = min(max(0, self._safe_int(stats.get("mana"), 10)), self._safe_int(stats.get("mana_max"), 10))
@@ -767,6 +848,8 @@ class PlayerSheetManager:
         return {
             "xp_gain": 0,
             "reason": "",
+            "restore_hp_to_full": False,
+            "restore_hp": 0,
             "stat_deltas": {
                 "force": 0,
                 "intelligence": 0,
@@ -782,17 +865,163 @@ class PlayerSheetManager:
             },
         }
 
+    def _reason_mentions_trade(self, text: str) -> bool:
+        plain = self._ascii_fold(text)
+        if not plain:
+            return False
+        return bool(
+            re.search(
+                r"\b(achat|acheter|achete|vente|vendre|vendu|echange|echanger|don|donner|offrir|troque)\b",
+                plain,
+            )
+        )
+
+    def _is_question_message(self, text: str) -> bool:
+        raw = str(text or "").strip()
+        if not raw:
+            return False
+        plain = self._ascii_fold(raw)
+        if "?" in raw:
+            return True
+        return bool(
+            re.match(
+                r"^(qui|que|quoi|ou|quand|comment|pourquoi|combien|quel|quelle|quels|quelles|est ce que|peux tu|puis je|dois je)\b",
+                plain,
+            )
+        )
+
+    def _reason_mentions_question(self, text: str) -> bool:
+        plain = self._ascii_fold(text)
+        if not plain:
+            return False
+        return bool(
+            re.search(
+                r"\b(question|interrogation|tu as pose une question|vous avez pose une question|demande interessante)\b",
+                plain,
+            )
+        )
+
+    def _reason_targets_player(self, reason: str, *, player_name: str, selected_npc_name: str) -> bool:
+        plain_reason = self._ascii_fold(reason)
+        plain_player = self._ascii_fold(player_name)
+        plain_npc = self._ascii_fold(selected_npc_name)
+        if not plain_reason or not plain_player:
+            return False
+        if plain_player == plain_npc and plain_npc:
+            return True
+        if plain_player not in plain_reason:
+            return False
+        if re.search(rf"\b(a|avec|vers)\s+{re.escape(plain_player)}\b", plain_reason):
+            return True
+        return False
+
     def _normalize_progression(self, raw: object) -> dict:
         if not isinstance(raw, dict):
             return self._empty_progression()
         out = self._empty_progression()
         out["xp_gain"] = max(0, min(self._safe_int(raw.get("xp_gain"), 0), 12))
         out["reason"] = str(raw.get("reason") or "").strip()
+        out["restore_hp_to_full"] = bool(raw.get("restore_hp_to_full", False))
+        out["restore_hp"] = max(0, min(self._safe_int(raw.get("restore_hp"), 0), 40))
         deltas = raw.get("stat_deltas")
         if isinstance(deltas, dict):
             for key in out["stat_deltas"].keys():
                 out["stat_deltas"][key] = max(0, min(self._safe_int(deltas.get(key), 0), 6))
         return out
+
+    def _sanitize_progression_for_heal_service(
+        self,
+        progression: dict,
+        *,
+        user_message: str,
+        npc_reply: str,
+        narration: str,
+        selected_npc_name: str,
+    ) -> dict:
+        if not isinstance(progression, dict):
+            return progression
+        if not self._is_heal_service_request(
+            user_message=user_message,
+            npc_reply=npc_reply,
+            narration=narration,
+            selected_npc_name=selected_npc_name,
+        ):
+            return progression
+
+        cleaned = dict(progression)
+        cleaned["restore_hp_to_full"] = True
+        deltas = cleaned.get("stat_deltas")
+        if isinstance(deltas, dict):
+            normalized_deltas = dict(deltas)
+            normalized_deltas["pv_max"] = 0
+            normalized_deltas["mana_max"] = 0
+            cleaned["stat_deltas"] = normalized_deltas
+        return cleaned
+
+    def _sanitize_progression_for_heal_action(
+        self,
+        progression: dict,
+        *,
+        user_message: str,
+        npc_reply: str,
+        narration: str,
+    ) -> dict:
+        if not isinstance(progression, dict):
+            return progression
+
+        deltas = progression.get("stat_deltas")
+        if not isinstance(deltas, dict):
+            return progression
+
+        pv_max_delta = max(0, self._safe_int(deltas.get("pv_max"), 0))
+        mana_max_delta = max(0, self._safe_int(deltas.get("mana_max"), 0))
+        if pv_max_delta <= 0 and mana_max_delta <= 0:
+            return progression
+        if bool(progression.get("restore_hp_to_full", False)):
+            return progression
+
+        user_plain = self._ascii_fold(user_message)
+        reason_plain = self._ascii_fold(str(progression.get("reason") or ""))
+        context_plain = self._ascii_fold(" ".join((npc_reply or "", narration or "")))
+        has_heal_signal = bool(_HEAL_REQUEST_RE.search(user_plain)) or (
+            bool(_HEAL_REQUEST_RE.search(reason_plain)) and bool(_HEAL_REQUEST_RE.search(context_plain))
+        )
+        if not has_heal_signal:
+            return progression
+
+        cleaned = dict(progression)
+        current_restore = max(0, self._safe_int(cleaned.get("restore_hp"), 0))
+        # Si le LLM a mis du soin en pv_max/mana_max, on convertit en soin direct.
+        converted_restore = max(current_restore, pv_max_delta)
+        if converted_restore <= 0 and mana_max_delta > 0:
+            converted_restore = max(1, mana_max_delta // 2)
+        cleaned["restore_hp"] = min(40, converted_restore)
+        normalized_deltas = dict(deltas)
+        normalized_deltas["pv_max"] = 0
+        normalized_deltas["mana_max"] = 0
+        cleaned["stat_deltas"] = normalized_deltas
+        return cleaned
+
+    def _is_heal_service_request(
+        self,
+        *,
+        user_message: str,
+        npc_reply: str,
+        narration: str,
+        selected_npc_name: str,
+    ) -> bool:
+        user_plain = self._ascii_fold(user_message)
+        if not user_plain:
+            return False
+        if _HEAL_REQUEST_EXCLUDE_RE.search(user_plain):
+            return False
+        if not _HEAL_REQUEST_RE.search(user_plain):
+            return False
+
+        context_plain = self._ascii_fold(" ".join((selected_npc_name or "", npc_reply or "", narration or "")))
+        if not context_plain:
+            return False
+        return bool(_HEAL_CONTEXT_RE.search(context_plain))
 
     def _xp_needed_for_next_level(self, level: int) -> int:
         lvl = max(1, int(level))
@@ -812,6 +1041,10 @@ class PlayerSheetManager:
     def _is_value_missing(self, value: str) -> bool:
         compact = re.sub(r"\s+", " ", (value or "").strip()).casefold()
         return compact in _PLACEHOLDER_TOKENS
+
+    def _ascii_fold(self, text: str) -> str:
+        raw = unicodedata.normalize("NFKD", str(text or "")).encode("ascii", "ignore").decode("ascii")
+        return re.sub(r"\s+", " ", raw.lower()).strip()
 
     def _deep_merge(self, base: object, patch: object) -> object:
         if not isinstance(base, dict) or not isinstance(patch, dict):

@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Relances Ataryxia en mode Telegram"
+  },
+  "entries": {
+    "narration.ataryxia.idle.context": [
+      "Tu ne m'as pas repondu sur {topic}. On reprend quand tu veux.",
+      "Je n'ai pas eu ton retour sur {topic}. Tu veux qu'on continue ?",
+      "On etait sur {topic}. Si tu veux, je reprends de la.",
+      "Tu veux qu'on revienne sur {topic} ?",
+      "Si tu es dispo, on reprend {topic} ensemble."
+    ],
+    "narration.ataryxia.idle.context_checkin": [
+      "Ca va de ton cote ? Tu ne m'as pas repondu sur {topic}."
+    ],
+    "narration.ataryxia.idle.checkin": [
+      "Ca va de ton cote ? Je n'ai plus eu de message depuis un petit moment.",
+      "Tout va bien pour toi ? Je n'ai pas eu de nouvelles depuis un moment.",
+      "J'espere que ca va. Si tu veux, on reprend quand tu es dispo."
+    ],
+    "narration.ataryxia.idle.generic": [
+      "Je te laisse le rythme, mais je suis prete quand tu veux reprendre.",
+      "Je suis la si tu veux continuer.",
+      "On peut reprendre tranquillement quand tu veux."
+    ],
+    "narration.ataryxia.idle.fallback": [
+      "Je suis la si tu veux reprendre la discussion."
+    ]
+  }
+}

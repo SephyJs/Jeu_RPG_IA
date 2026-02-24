@@ -1,0 +1,7 @@
+{
+  "id": "citadelle_01",
+  "title": "Citadelle - Hall du dernier rempart",
+  "narrator_text": "Ataryxia : Muraille dans la muraille, la citadelle est le coeur de la defense de Lumeria.",
+  "npcs": ["Commandant", "Garde d'elite", "Porte-etendard"],
+  "choices": []
+}

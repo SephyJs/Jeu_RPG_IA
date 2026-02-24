@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
 
-from app.ui.state.game_state import Choice, Scene
+from app.core.models import Choice, Scene
 from .models import model_for
 from .world_time import format_hour_label, minute_of_day
 
@@ -57,14 +57,69 @@ _URBAN_ANCHORS = {
 _CITY_LAYOUT_PRESETS: dict[str, dict[str, object]] = {
     "Lumeria": {
         "center_scene_id": "village_center_01",
-        # Effet ruelles: tout n'est pas joignable directement depuis la place.
+        # Lumina/Lumeria: graphe en toile avec quartiers relies + liens transverses.
         "edges": [
+            ("village_center_01", "quartier_artisanal_01"),
+            ("village_center_01", "quartier_admin_noblesse_01"),
+            ("village_center_01", "quartier_magique_01"),
+            ("village_center_01", "quartier_spirituel_01"),
+            ("village_center_01", "quartier_militaire_01"),
             ("village_center_01", "taverne_01"),
-            ("village_center_01", "forge_01"),
-            ("taverne_01", "boutique_01"),
-            ("forge_01", "infirmerie_01"),
-            ("infirmerie_01", "temple_01"),
-            ("temple_01", "prison_01"),
+            ("village_center_01", "marche_central_01"),
+            ("quartier_admin_noblesse_01", "quartier_militaire_01"),
+            ("quartier_admin_noblesse_01", "quartier_magique_01"),
+            ("quartier_admin_noblesse_01", "quartier_spirituel_01"),
+            ("quartier_artisanal_01", "quartier_militaire_01"),
+            ("quartier_artisanal_01", "quartier_magique_01"),
+            ("quartier_artisanal_01", "quartier_spirituel_01"),
+            ("quartier_magique_01", "quartier_spirituel_01"),
+            ("quartier_militaire_01", "quartier_spirituel_01"),
+            ("quartier_artisanal_01", "taverne_01"),
+            ("quartier_artisanal_01", "forge_01"),
+            ("quartier_artisanal_01", "boutique_01"),
+            ("quartier_artisanal_01", "marche_central_01"),
+            ("quartier_artisanal_01", "ateliers_divers_01"),
+            ("quartier_artisanal_01", "guildes_01"),
+            ("quartier_artisanal_01", "banque_nains_01"),
+            ("quartier_artisanal_01", "maison_de_plaisir_01"),
+            ("quartier_spirituel_01", "infirmerie_01"),
+            ("quartier_spirituel_01", "temple_01"),
+            ("quartier_spirituel_01", "grand_temple_01"),
+            ("quartier_spirituel_01", "sanctuaire_quartier_01"),
+            ("quartier_spirituel_01", "monastere_01"),
+            ("quartier_spirituel_01", "necropole_01"),
+            ("quartier_spirituel_01", "hospice_01"),
+            ("quartier_militaire_01", "prison_01"),
+            ("quartier_militaire_01", "caserne_01"),
+            ("quartier_militaire_01", "armurerie_01"),
+            ("quartier_militaire_01", "terrain_entrainement_01"),
+            ("quartier_militaire_01", "tours_guet_01"),
+            ("quartier_militaire_01", "citadelle_01"),
+            ("quartier_admin_noblesse_01", "palais_royal_01"),
+            ("quartier_admin_noblesse_01", "conseil_anciens_01"),
+            ("quartier_admin_noblesse_01", "tribunal_justice_01"),
+            ("quartier_admin_noblesse_01", "hotel_monnaies_01"),
+            ("quartier_admin_noblesse_01", "archives_historiques_01"),
+            ("quartier_admin_noblesse_01", "villas_manoirs_01"),
+            ("quartier_magique_01", "academie_magie_01"),
+            ("quartier_magique_01", "laboratoire_alchimie_01"),
+            ("quartier_magique_01", "observatoire_01"),
+            ("quartier_magique_01", "herboristerie_01"),
+            ("quartier_magique_01", "menagerie_exotique_01"),
+            ("quartier_magique_01", "scriptoria_01"),
+            ("hotel_monnaies_01", "banque_nains_01"),
+            ("archives_historiques_01", "scriptoria_01"),
+            ("tribunal_justice_01", "prison_01"),
+            ("palais_royal_01", "citadelle_01"),
+            ("armurerie_01", "forge_01"),
+            ("laboratoire_alchimie_01", "herboristerie_01"),
+            ("observatoire_01", "monastere_01"),
+            ("marche_central_01", "boutique_01"),
+            ("infirmerie_01", "herboristerie_01"),
+            ("grand_temple_01", "temple_01"),
+            ("hospice_01", "infirmerie_01"),
+            ("guildes_01", "conseil_anciens_01"),
+            ("citadelle_01", "tours_guet_01"),
         ],
     }
 }
@@ -102,6 +157,145 @@ _CITY_DISTRICT_TEMPLATES: list[dict[str, object]] = [
     },
 ]
 
+_SETTLEMENT_CITY_TEMPLATES: list[dict[str, object]] = [
+    {
+        "title": "La Place du Village",
+        "narrator": "Ataryxia : Une grande place de pierre ou convergent les rumeurs, les affaires et les querelles du jour.",
+        "npcs": ["Crieur public", "Marchande", "Garde de ronde"],
+    },
+    {
+        "title": "L'Auberge du Relais",
+        "narrator": "Ataryxia : Bois ancien, feu vivant et voyageurs fatigues font de cette auberge un noeud de recits et de contrats.",
+        "npcs": ["Aubergiste", "Serveuse", "Mercenaire de passage"],
+    },
+    {
+        "title": "La Maison Commune / Mairie",
+        "narrator": "Ataryxia : Registres, sceaux et decrets s'empilent derriere les portes de l'administration locale.",
+        "npcs": ["Maire", "Secretaire", "Percepteur"],
+    },
+    {
+        "title": "La Halle couverte",
+        "narrator": "Ataryxia : Sous les poutres noircies de la halle, les etals changent de main au rythme des saisons.",
+        "npcs": ["Commercante", "Porteur", "Courtier"],
+    },
+    {
+        "title": "La Forge de Village",
+        "narrator": "Ataryxia : Le chant du marteau frappe l'air comme une cloche de guerre.",
+        "npcs": ["Forgeron", "Apprenti forgeron"],
+    },
+    {
+        "title": "Le Moulin",
+        "narrator": "Ataryxia : Les pales grincent ou la roue claque, transformant grain et sueur en survie quotidienne.",
+        "npcs": ["Meuniere", "Livreur de farine"],
+    },
+    {
+        "title": "La Scierie",
+        "narrator": "Ataryxia : Sciures volantes et poutres fraiches alimentent les charpentes de la cite.",
+        "npcs": ["Maitre scieur", "Ouvriere du bois"],
+    },
+    {
+        "title": "La Tannerie / Cordonnerie",
+        "narrator": "Ataryxia : Odeur acre, cuir humide et bottes en cours de couture emplissent l'atelier.",
+        "npcs": ["Tanneur", "Cordonnier"],
+    },
+    {
+        "title": "Le Magasin General",
+        "narrator": "Ataryxia : Outils, vivres et petits secrets s'echangent derriere un comptoir surcharge.",
+        "npcs": ["Boutiquier", "Commis"],
+    },
+    {
+        "title": "La Maison de la Garde",
+        "narrator": "Ataryxia : Casques alignes, rapports griffonnes et vigilance constante contre les ennuis de nuit.",
+        "npcs": ["Caporal", "Garde"],
+    },
+    {
+        "title": "La Petite Chapelle",
+        "narrator": "Ataryxia : Quelques cierges suffisent a tenir la peur a distance quand la nuit tombe.",
+        "npcs": ["Acolyte", "Devote"],
+    },
+    {
+        "title": "La Maison de la Guerisseuse / Herboriste",
+        "narrator": "Ataryxia : Herbes sechees, decoctions ambrées et remedes de terrain sauvent plus de vies que les discours.",
+        "npcs": ["Guerisseuse", "Herboriste"],
+    },
+]
+
+_SETTLEMENT_VILLAGE_TEMPLATES: list[dict[str, object]] = [
+    {
+        "title": "Etable / Bergerie / Porcherie",
+        "narrator": "Ataryxia : Betes nerveuses, odeur de paille et de fumier; la richesse du hameau se compte ici.",
+        "npcs": ["Berger", "Eleveuse"],
+    },
+    {
+        "title": "Forge de campagne",
+        "narrator": "Ataryxia : Une petite forge robuste ou l'on repare l'essentiel avant l'hiver ou la guerre.",
+        "npcs": ["Forgeron de campagne"],
+    },
+    {
+        "title": "Four a pain communal",
+        "narrator": "Ataryxia : Chaleur du four, mains farinees et rituels quotidiens soudent la communaute.",
+        "npcs": ["Boulangere", "Villageois"],
+    },
+    {
+        "title": "Bucherie / Depot de bois",
+        "narrator": "Ataryxia : Buches empilees, copeaux et haches usées preparent les longues nuits froides.",
+        "npcs": ["Bucheron", "Livreur de bois"],
+    },
+    {
+        "title": "Fumoir",
+        "narrator": "Ataryxia : Poissons et viandes pendent dans une fumee epaisse qui prolonge la survie.",
+        "npcs": ["Fumier", "Pecheur"],
+    },
+    {
+        "title": "Atelier du vannier",
+        "narrator": "Ataryxia : Osier trempe, paniers solides et gestes repetes depuis des generations.",
+        "npcs": ["Vannier"],
+    },
+    {
+        "title": "Maison du Bailli",
+        "narrator": "Ataryxia : Comptes du domaine, impots et arbitrages ruraux se traitent derriere cette porte.",
+        "npcs": ["Bailli", "Clerc local"],
+    },
+    {
+        "title": "Tour de guet en bois",
+        "narrator": "Ataryxia : Une tour rustique qui scrute route et lisiere pour anticiper les mauvaises surprises.",
+        "npcs": ["Sentinelle"],
+    },
+    {
+        "title": "Palissade de pieux",
+        "narrator": "Ataryxia : L'enceinte de bois marque la frontiere fragile entre le foyer et le dehors.",
+        "npcs": ["Garde rural"],
+    },
+    {
+        "title": "Pont de pierre ou de bois",
+        "narrator": "Ataryxia : Ce passage tient le village relie au monde, malgre la riviere et les crues.",
+        "npcs": ["Passeur", "Voyageur"],
+    },
+    {
+        "title": "Auberge de route",
+        "narrator": "Ataryxia : Unique lieu de boisson, d'informations et de repos avant la prochaine etape.",
+        "npcs": ["Aubergiste de route", "Routier"],
+    },
+    {
+        "title": "Cimetiere de campagne",
+        "narrator": "Ataryxia : Un muret de pierre entoure les morts du hameau, gardes par le silence.",
+        "npcs": ["Fossoyeuse"],
+    },
+    {
+        "title": "Hutte de la guerisseuse",
+        "narrator": "Ataryxia : A la lisiere des bois, une hutte de remedes et de vieilles superstitions.",
+        "npcs": ["Guerisseuse des bois"],
+    },
+    {
+        "title": "Cabane de trappeur",
+        "narrator": "Ataryxia : Peaux sechant au vent et pieges alignes racontent une vie rude et discrète.",
+        "npcs": ["Trappeur"],
+    },
+]
+
+_SETTLEMENT_CITY_HINT_TOKENS = ("ville", "cite", "cité", "quartier", "capitale", "metropole", "métropole")
+_SETTLEMENT_VILLAGE_HINT_TOKENS = ("village", "hameau", "bourg", "bourgade")
+
 _BUILDING_TITLE_TOKENS = (
     "taverne",
     "auberge",
@@ -120,6 +314,69 @@ _BUILDING_TITLE_TOKENS = (
     "salle",
     "marche couvert",
     "marché couvert",
+    "palais",
+    "chateau",
+    "château",
+    "conseil",
+    "tribunal",
+    "hotel des monnaies",
+    "hôtel des monnaies",
+    "archives",
+    "manoir",
+    "armurerie",
+    "terrain d'entrainement",
+    "terrain d'entraînement",
+    "tour de guet",
+    "tours de guet",
+    "citadelle",
+    "academie",
+    "académie",
+    "laboratoire",
+    "observatoire",
+    "herboristerie",
+    "menagerie",
+    "ménagerie",
+    "scriptoria",
+    "marche central",
+    "marché central",
+    "guilde",
+    "guildes",
+    "banque",
+    "monastere",
+    "monastère",
+    "necropole",
+    "nécropole",
+    "hospice",
+    "chapelle",
+    "mairie",
+    "maison commune",
+    "halle",
+    "moulin",
+    "scierie",
+    "tannerie",
+    "cordonnerie",
+    "magasin general",
+    "magasin général",
+    "etable",
+    "étable",
+    "bergerie",
+    "porcherie",
+    "four a pain",
+    "four à pain",
+    "fumoir",
+    "vannier",
+    "bailli",
+    "cimetiere",
+    "cimetière",
+    "hutte",
+    "cabane",
+    "trappeur",
+    "bucherie",
+    "depot de bois",
+    "dépôt de bois",
+    "maison de plaisir",
+    "bordel",
+    "lupanar",
 )
 
 _STREET_TITLE_TOKENS = (
@@ -159,16 +416,266 @@ _SCENE_HOURS_BY_ID: dict[str, tuple[int, int, str]] = {
     "temple_01": (6, 22, "Le temple"),
     "infirmerie_01": (0, 0, "L'infirmerie"),
     "prison_01": (0, 0, "La prison"),
+    "marche_central_01": (7, 20, "Le marche"),
+    "banque_nains_01": (8, 17, "La banque des nains"),
+    "palais_royal_01": (8, 20, "Le palais royal"),
+    "citadelle_01": (0, 0, "La citadelle"),
+    "grand_temple_01": (6, 23, "Le grand temple"),
+    "monastere_01": (6, 21, "Le monastere"),
+    "hospice_01": (0, 0, "L'hospice"),
+    "academie_magie_01": (7, 22, "L'academie de magie"),
+    "maison_de_plaisir_01": (19, 4, "La maison de plaisir"),
 }
 
 _SCENE_HOURS_BY_TITLE: list[tuple[tuple[str, ...], tuple[int, int, str]]] = [
     (("boutique", "marchand", "comptoir", "marche couvert", "marché couvert"), (8, 18, "Le commerce")),
-    (("forge", "atelier"), (7, 19, "La forge")),
+    (("marche central", "marché central", "guilde", "guildes", "banque"), (8, 20, "Le commerce")),
+    (("forge", "atelier", "scierie", "tannerie", "cordonnerie", "vannier"), (7, 19, "Les ateliers")),
+    (("moulin", "four a pain", "four à pain", "fumoir"), (6, 20, "Les ressources du village")),
+    (("mairie", "maison commune", "bailli", "halle"), (8, 18, "L'administration locale")),
     (("auberge", "taverne"), (6, 2, "L'auberge")),
     (("temple", "sanctuaire"), (6, 22, "Le sanctuaire")),
+    (("palais", "conseil", "tribunal", "archives", "monnaies"), (8, 20, "Les institutions")),
+    (("academie", "laboratoire", "observatoire", "scriptoria", "menagerie"), (7, 22, "Le quartier savant")),
     (("infirmerie",), (0, 0, "L'infirmerie")),
-    (("prison", "caserne"), (0, 0, "Le poste de garde")),
+    (("hospice",), (0, 0, "L'hospice")),
+    (("prison", "caserne", "citadelle", "armurerie", "tour de guet"), (0, 0, "Le poste de garde")),
 ]
+
+_GENERIC_LOCATION_SUFFIXES = {
+    "salle principale",
+    "salle commune",
+    "salle centrale",
+    "hall principal",
+    "grand hall",
+    "zone centrale",
+    "zone principale",
+    "entree",
+    "annexe",
+    "couloir principal",
+    "rue principale",
+    "place centrale",
+}
+
+_GENERIC_LOCATION_WORDS = {
+    "salle",
+    "zone",
+    "hall",
+    "entree",
+    "annexe",
+    "couloir",
+    "rue",
+    "place",
+    "quartier",
+    "principal",
+    "principale",
+    "centrale",
+    "commun",
+    "commune",
+}
+
+_LOCATION_RESONANCE_RULES: list[dict[str, object]] = [
+    {
+        "key": "taverne",
+        "label": "Taverne",
+        "tokens": ("taverne", "auberge", "cabaret"),
+        "flavors": [
+            "Le Gobelet Fendu",
+            "La Chope Noircie",
+            "Le Banc du Corbeau",
+            "L'Atre des Voyageurs",
+            "Le Chene Ivre",
+        ],
+    },
+    {
+        "key": "forge",
+        "label": "Forge",
+        "tokens": ("forge", "atelier", "fonderie"),
+        "flavors": [
+            "L'Enclume Rouge",
+            "Le Soufflet Noir",
+            "La Frappe des Cendres",
+            "Le Marteau Creux",
+            "La Braise des Fers",
+        ],
+    },
+    {
+        "key": "temple",
+        "label": "Temple",
+        "tokens": ("temple", "sanctuaire", "chapelle"),
+        "flavors": [
+            "Le Choeur des Murmures",
+            "La Nef des Veilleurs",
+            "L'Autel Fracture",
+            "Le Reliquaire Sourd",
+            "Le Voile de Cendre",
+        ],
+    },
+    {
+        "key": "boutique",
+        "label": "Boutique",
+        "tokens": ("boutique", "comptoir", "marche", "echoppe"),
+        "flavors": [
+            "Les Mille Fioles",
+            "Le Comptoir des Brumes",
+            "L'Etal des Rumeurs",
+            "Le Sac et la Lame",
+            "La Corde et le Cuivre",
+        ],
+    },
+    {
+        "key": "infirmerie",
+        "label": "Infirmerie",
+        "tokens": ("infirmerie", "apothic", "hopital", "dispensaire"),
+        "flavors": [
+            "L'Onguent Gris",
+            "Le Repos des Blesses",
+            "La Salle des Cataplasmes",
+            "Le Bocal d'Ambre",
+            "La Main Calmee",
+        ],
+    },
+    {
+        "key": "prison",
+        "label": "Prison",
+        "tokens": ("prison", "caserne", "geole", "poste"),
+        "flavors": [
+            "Les Barreaux d'Etain",
+            "Le Couloir des Cles",
+            "La Garde Cendree",
+            "Le Verrou Sombre",
+            "La Pierre des Aveux",
+        ],
+    },
+    {
+        "key": "rue",
+        "label": "Ruelle",
+        "tokens": ("ruelle", "rue", "allee", "place", "carrefour", "quartier", "sentier", "chemin"),
+        "flavors": [
+            "La Traverse des Ombres",
+            "Le Carrefour des Lanternes",
+            "La Ruelle des Cendres",
+            "Le Passage des Veilleurs",
+            "Le Detour des Corbeaux",
+        ],
+    },
+    {
+        "key": "bordel",
+        "label": "Maison de Plaisir",
+        "tokens": ("bordel", "lupanar", "maison de plaisir", "maison close"),
+        "flavors": [
+            "Le Baiser de Velours",
+            "La Rose Nocturne",
+            "Les Soupirs de Soie",
+            "L'Etreinte d'Or",
+            "Le Jardin des Delices",
+        ],
+    },
+]
+
+_LOCATION_HINT_KEYWORDS = (
+    "ecole",
+    "academie",
+    "guilde",
+    "ordre",
+    "tour",
+    "bibliotheque",
+    "temple",
+    "sanctuaire",
+    "arene",
+    "caserne",
+    "atelier",
+    "marche",
+    "port",
+    "laboratoire",
+    "observatoire",
+    "fort",
+    "citadelle",
+    "ecole",
+)
+
+_LOCATION_HINT_CONTEXT_WORDS = (
+    "a",
+    "au",
+    "aux",
+    "dans",
+    "vers",
+    "direction",
+    "rejoins",
+    "rends toi",
+    "va",
+)
+
+_LOCATION_HINT_SMALL_WORDS = {"de", "du", "des", "la", "le", "les", "d"}
+_LOCATION_HINT_TRAILING_STOPWORDS = {
+    "pour",
+    "afin",
+    "si",
+    "et",
+    "ou",
+    "mais",
+    "car",
+    "donc",
+    "alors",
+    "que",
+    "qui",
+    "quoi",
+    "quand",
+    "lorsque",
+    "avec",
+    "sans",
+}
+
+_LOCATION_HINT_NEIGHBOR_CUES = (
+    "ville voisine",
+    "ville d a cote",
+    "a cote",
+    "dans la ville voisine",
+    "prochaine ville",
+    "non loin",
+    "plus loin",
+    "hors de la ville",
+    "dans une autre ville",
+)
+
+_LOCATION_HINT_MAJOR_STRUCTURE_TOKENS = (
+    "ecole",
+    "academie",
+    "guilde",
+    "ordre",
+    "temple",
+    "sanctuaire",
+    "citadelle",
+    "fort",
+    "tour",
+    "observatoire",
+    "laboratoire",
+    "bibliotheque",
+    "arene",
+)
+
+_LOCATION_HINT_MERCHANT_TOKENS = (
+    "marchand",
+    "boutique",
+    "echoppe",
+    "comptoir",
+    "marche",
+)
+
+_LOCATION_HINT_SPECIAL_MERCHANT_TOKENS = (
+    "special",
+    "specialise",
+    "rare",
+    "exotique",
+    "arcane",
+    "artefact",
+    "relique",
+    "alchim",
+    "mage",
+    "noir",
+    "itinerant",
+    "nomade",
+)
 
 
 def _norm_anchor_token(text: str) -> str:
@@ -355,19 +862,51 @@ class LocationManager:
         return canonical_anchor(anchor) in _URBAN_ANCHORS
 
     def seed_static_anchors(self, scenes: dict[str, Scene]) -> None:
-        static_map = {
-            "village_center_01": "Lumeria",
-            "taverne_01": "Lumeria",
-            "forge_01": "Lumeria",
-            "boutique_01": "Lumeria",
-            "infirmerie_01": "Lumeria",
-            "temple_01": "Lumeria",
-            "prison_01": "Lumeria",
+        static_ids = {
+            "village_center_01",
+            "quartier_admin_noblesse_01",
+            "quartier_militaire_01",
+            "quartier_magique_01",
+            "quartier_artisanal_01",
+            "quartier_spirituel_01",
+            "taverne_01",
+            "forge_01",
+            "boutique_01",
+            "infirmerie_01",
+            "temple_01",
+            "prison_01",
+            "palais_royal_01",
+            "conseil_anciens_01",
+            "tribunal_justice_01",
+            "hotel_monnaies_01",
+            "archives_historiques_01",
+            "villas_manoirs_01",
+            "caserne_01",
+            "armurerie_01",
+            "terrain_entrainement_01",
+            "tours_guet_01",
+            "citadelle_01",
+            "academie_magie_01",
+            "laboratoire_alchimie_01",
+            "observatoire_01",
+            "herboristerie_01",
+            "menagerie_exotique_01",
+            "scriptoria_01",
+            "marche_central_01",
+            "ateliers_divers_01",
+            "guildes_01",
+            "banque_nains_01",
+            "maison_de_plaisir_01",
+            "grand_temple_01",
+            "sanctuaire_quartier_01",
+            "monastere_01",
+            "necropole_01",
+            "hospice_01",
         }
-        for scene_id, anchor in static_map.items():
+        for scene_id in static_ids:
             scene = scenes.get(scene_id)
             if scene and not scene.map_anchor:
-                scene.map_anchor = anchor
+                scene.map_anchor = "Lumeria"
         self.apply_city_street_layouts(scenes)
 
     def apply_city_street_layouts(self, scenes: dict[str, Scene]) -> None:
@@ -442,28 +981,37 @@ class LocationManager:
                 )
             scene.choices = self._dedupe_choices(merged)
 
-    def generate_city_map_for_new_anchor(
+    def settlement_kind_for_scene(self, scene: Scene, *, anchor: str) -> str:
+        anchor_name = canonical_anchor(anchor)
+        if self.is_city_anchor(anchor_name):
+            return "city"
+
+        title_norm = _norm_text_token(scene.title if isinstance(scene, Scene) else "")
+        if any(token in title_norm for token in _SETTLEMENT_CITY_HINT_TOKENS):
+            return "city"
+        if any(token in title_norm for token in _SETTLEMENT_VILLAGE_HINT_TOKENS):
+            return "village"
+        # Par defaut, toute nouvelle zone habitee non-urbaine est traitee comme un village.
+        return "village"
+
+    def generate_settlement_map_for_new_anchor(
         self,
         *,
         anchor: str,
         center_scene: Scene,
         existing_scenes: dict[str, Scene],
-    ) -> list[Scene]:
+    ) -> tuple[str, list[Scene]]:
         anchor_name = canonical_anchor(anchor)
-        if not self.is_city_anchor(anchor_name):
-            return []
-
-        rng = random.Random(f"city_layout::{anchor_name}")
-        templates = list(_CITY_DISTRICT_TEMPLATES)
+        settlement_kind = self.settlement_kind_for_scene(center_scene, anchor=anchor_name)
+        templates = list(_SETTLEMENT_CITY_TEMPLATES if settlement_kind == "city" else _SETTLEMENT_VILLAGE_TEMPLATES)
+        rng = random.Random(f"settlement_layout::{anchor_name}::{settlement_kind}")
         rng.shuffle(templates)
 
         existing_ids = set(existing_scenes.keys())
         existing_titles = {scene.title for scene in existing_scenes.values()}
-
-        # Ville inconnue: on crée plusieurs points de rue dès l'arrivée.
-        district_count = 4
+        local_scenes: dict[str, Scene] = {center_scene.id: center_scene}
         new_scenes: list[Scene] = []
-        for template in templates[:district_count]:
+        for template in templates:
             title = self._unique_title(f"{anchor_name} - {str(template['title'])}", existing_titles)
             scene_id = self._unique_scene_id(anchor_name, title, existing_ids)
             existing_ids.add(scene_id)
@@ -476,18 +1024,125 @@ class LocationManager:
             npcs_raw = template.get("npcs")
             npc_names = [str(n).strip() for n in npcs_raw if isinstance(n, str) and str(n).strip()] if isinstance(npcs_raw, list) else []
 
-            new_scenes.append(
-                Scene(
-                    id=scene_id,
-                    title=title,
-                    narrator_text=narrator,
-                    map_anchor=anchor_name,
-                    generated=True,
-                    npc_names=npc_names[:4],
-                    choices=[],
-                )
+            generated_scene = Scene(
+                id=scene_id,
+                title=title,
+                narrator_text=narrator,
+                map_anchor=anchor_name,
+                generated=True,
+                npc_names=npc_names[:4],
+                choices=[],
             )
-        return new_scenes
+            local_scenes[generated_scene.id] = generated_scene
+            new_scenes.append(generated_scene)
+
+        edges = self._build_settlement_edges(local_scenes, center_id=center_scene.id, settlement_kind=settlement_kind)
+        if edges:
+            self._register_settlement_layout_preset(
+                anchor_name=anchor_name,
+                center_scene_id=center_scene.id,
+                edges=edges,
+            )
+
+        return settlement_kind, new_scenes
+
+    def generate_city_map_for_new_anchor(
+        self,
+        *,
+        anchor: str,
+        center_scene: Scene,
+        existing_scenes: dict[str, Scene],
+    ) -> list[Scene]:
+        settlement_kind, scenes = self.generate_settlement_map_for_new_anchor(
+            anchor=anchor,
+            center_scene=center_scene,
+            existing_scenes=existing_scenes,
+        )
+        if settlement_kind != "city":
+            return []
+        return scenes
+
+    def _build_settlement_edges(
+        self,
+        scenes: dict[str, Scene],
+        *,
+        center_id: str,
+        settlement_kind: str,
+    ) -> set[tuple[str, str]]:
+        local_ids = [sid for sid in scenes.keys()]
+        if len(local_ids) < 2:
+            return set()
+
+        if center_id not in scenes:
+            center_id = local_ids[0]
+
+        street_ids = [
+            sid
+            for sid in local_ids
+            if not is_building_scene_title(scenes[sid].title)
+        ]
+        building_ids = [
+            sid
+            for sid in local_ids
+            if is_building_scene_title(scenes[sid].title)
+        ]
+
+        out: set[tuple[str, str]] = set()
+
+        def add_edge(a: str, b: str) -> None:
+            if not a or not b or a == b:
+                return
+            out.add(tuple(sorted((a, b))))
+
+        primary_hub = center_id
+        if is_building_scene_title(scenes[center_id].title):
+            if street_ids:
+                primary_hub = sorted(street_ids, key=lambda sid: (scenes[sid].title.casefold(), sid))[0]
+                add_edge(center_id, primary_hub)
+        elif center_id not in street_ids:
+            street_ids.append(center_id)
+
+        if primary_hub not in street_ids:
+            street_ids.append(primary_hub)
+        street_ids = sorted(set(street_ids), key=lambda sid: (scenes[sid].title.casefold(), sid))
+
+        # Maille de rues.
+        for sid in street_ids:
+            if sid != primary_hub:
+                add_edge(primary_hub, sid)
+        for idx in range(len(street_ids) - 1):
+            add_edge(street_ids[idx], street_ids[idx + 1])
+        if len(street_ids) >= 3:
+            add_edge(street_ids[0], street_ids[-1])
+
+        # Accroche chaque batiment a une rue.
+        hubs = street_ids[:] if street_ids else [primary_hub]
+        ordered_buildings = sorted(building_ids, key=lambda sid: (scenes[sid].title.casefold(), sid))
+        for idx, bid in enumerate(ordered_buildings):
+            hub = hubs[idx % len(hubs)]
+            add_edge(bid, hub)
+
+        # Quelques liens transverses pour un rendu "toile".
+        step = 3 if settlement_kind == "city" else 4
+        for idx in range(0, len(ordered_buildings) - step, step):
+            add_edge(ordered_buildings[idx], ordered_buildings[idx + step])
+
+        return out
+
+    def _register_settlement_layout_preset(
+        self,
+        *,
+        anchor_name: str,
+        center_scene_id: str,
+        edges: set[tuple[str, str]],
+    ) -> None:
+        if not edges:
+            return
+        rows = sorted(tuple(sorted((a, b))) for a, b in edges if a and b and a != b)
+        _CITY_LAYOUT_PRESETS[anchor_name] = {
+            "center_scene_id": center_scene_id,
+            "edges": rows,
+        }
 
 
     async def generate_next_scene(self, current_scene: Scene, existing_scenes: dict[str, Scene]) -> tuple[Scene, str]:
@@ -698,6 +1353,9 @@ class LocationManager:
             "- N'invente JAMAIS de nouvel ancrage de carte.\n"
             "- N'invente JAMAIS un chemin hors graphe officiel.\n"
             "- title: court, évocateur, pas de doublon exact avec les lieux existants.\n"
+            "- Si le lieu est une ville ou un village, le title doit le mentionner clairement.\n"
+            "- Evite les titres generiques ('Salle principale', 'Zone centrale', 'Rue principale').\n"
+            "- Pour les lieux importants (taverne, temple, forge, boutique, etc.), prefere un sous-titre evocateur.\n"
             "- narrator_text: commence par 'Ataryxia :', 1 à 3 phrases, ambiance sombre.\n"
             "- npcs: 0 à 4 PNJ crédibles pour le lieu.\n"
             "- travel_label_from_current: phrase actionnable pour un bouton.\n"
@@ -720,6 +1378,7 @@ class LocationManager:
 
         if not draft.title.strip():
             draft.title = f"Sentier Oublié vers {target_anchor}"
+        draft.title = self._retone_generated_title(draft.title, target_anchor=target_anchor)
 
         if not draft.narrator_text.strip().startswith("Ataryxia"):
             draft.narrator_text = f"Ataryxia : {draft.narrator_text.strip() or 'Un nouveau lieu s’ouvre devant vous.'}"
@@ -780,6 +1439,245 @@ class LocationManager:
 
     def _norm(self, text: str) -> str:
         return self._slug(text)
+
+    def extract_location_hints(self, text: str) -> list[str]:
+        raw = unicodedata.normalize("NFKD", str(text or "")).encode("ascii", "ignore").decode("ascii").lower()
+        raw = re.sub(r"[’']", " ", raw)
+        plain = re.sub(r"\s+", " ", raw).strip()
+        if not plain:
+            return []
+        if not any(keyword in plain for keyword in _LOCATION_HINT_KEYWORDS):
+            return []
+
+        found_raw: list[str] = []
+        keyword_group = "|".join(re.escape(k) for k in _LOCATION_HINT_KEYWORDS)
+        context_group = "|".join(re.escape(c) for c in _LOCATION_HINT_CONTEXT_WORDS)
+        # Cherche d'abord des segments contextualisés ("va a l'ecole des magiciens").
+        contextual_pattern = re.compile(
+            rf"\b(?:{context_group})\b\s+(?:l\s+|la\s+|le\s+|les\s+|du\s+|de\s+la\s+|de\s+l\s+|des\s+)?"
+            rf"(?P<name>(?:{keyword_group})(?:\s+[a-z0-9]+){{0,7}})",
+            flags=re.IGNORECASE,
+        )
+        for m in contextual_pattern.finditer(plain):
+            value = str(m.group("name") or "").strip()
+            if value:
+                found_raw.append(value)
+
+        # Fallback: tout groupe lexical démarrant par un mot-clé de lieu.
+        broad_pattern = re.compile(
+            rf"\b(?P<name>(?:{keyword_group})(?:\s+[a-z0-9]+){{0,7}})",
+            flags=re.IGNORECASE,
+        )
+        for m in broad_pattern.finditer(plain):
+            value = str(m.group("name") or "").strip()
+            if value:
+                found_raw.append(value)
+
+        out: list[str] = []
+        seen: set[str] = set()
+        for candidate in found_raw:
+            cleaned = self._clean_location_hint_phrase(candidate)
+            if not cleaned:
+                continue
+            key = _norm_text_token(cleaned)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            out.append(cleaned)
+        return out[:4]
+
+    def suggest_hint_location_title(self, *, text: str, existing_titles: list[str]) -> str | None:
+        hints = self.extract_location_hints(text)
+        if not hints:
+            return None
+
+        existing_norms = [_norm_text_token(str(title or "")) for title in (existing_titles or [])]
+        anchor_norms = {_norm_text_token(anchor) for anchor in MAP_ANCHORS}
+
+        for hint in hints:
+            hint_norm = _norm_text_token(hint)
+            if not hint_norm:
+                continue
+            if hint_norm in anchor_norms:
+                continue
+            if self._is_hint_already_known(hint_norm, existing_norms):
+                continue
+            return hint
+        return None
+
+    def choose_hint_anchor(
+        self,
+        *,
+        current_anchor: str,
+        text: str,
+        hint_title: str | None = None,
+        rng: random.Random | None = None,
+    ) -> str:
+        current = canonical_anchor(current_anchor or "Lumeria")
+        mentions = self.extract_anchor_mentions(text)
+        if mentions:
+            for anchor in mentions:
+                if anchor != current:
+                    return anchor
+            return mentions[0]
+
+        neighbors = official_neighbors(current)
+        if not neighbors:
+            return current
+
+        combined_plain = _norm_text_token(" ".join(part for part in (text, hint_title or "") if part))
+        has_neighbor_cue = any(cue in combined_plain for cue in _LOCATION_HINT_NEIGHBOR_CUES)
+
+        is_merchant = any(token in combined_plain for token in _LOCATION_HINT_MERCHANT_TOKENS)
+        is_major_structure = any(token in combined_plain for token in _LOCATION_HINT_MAJOR_STRUCTURE_TOKENS)
+        is_special_merchant = is_merchant and any(
+            token in combined_plain for token in _LOCATION_HINT_SPECIAL_MERCHANT_TOKENS
+        )
+
+        if is_major_structure:
+            neighbor_probability = 0.20
+        elif is_special_merchant:
+            neighbor_probability = 0.14
+        elif is_merchant:
+            neighbor_probability = 0.03
+        else:
+            neighbor_probability = 0.07
+
+        if has_neighbor_cue:
+            if is_major_structure:
+                neighbor_probability = max(neighbor_probability, 0.55)
+            elif is_special_merchant:
+                neighbor_probability = max(neighbor_probability, 0.28)
+            else:
+                neighbor_probability = max(neighbor_probability, 0.18)
+
+        picker = rng or random
+        try:
+            roll = float(picker.random())
+        except Exception:
+            roll = random.random()
+        if roll >= neighbor_probability:
+            return current
+
+        candidate_anchors = neighbors
+        if is_special_merchant:
+            city_pool = [anchor for anchor in MAP_ANCHORS if anchor != current and self.is_city_anchor(anchor)]
+            if city_pool:
+                candidate_anchors = city_pool
+
+        try:
+            return str(picker.choice(candidate_anchors))
+        except Exception:
+            return random.choice(candidate_anchors)
+
+    def extract_anchor_mentions(self, text: str) -> list[str]:
+        plain = _norm_text_token(text)
+        if not plain:
+            return []
+        found: list[str] = []
+        for anchor in MAP_ANCHORS:
+            anchor_norm = _norm_text_token(anchor)
+            if not anchor_norm:
+                continue
+            if anchor_norm in plain:
+                found.append(anchor)
+        return found[:3]
+
+    def _is_hint_already_known(self, hint_norm: str, existing_norms: list[str]) -> bool:
+        hint_tokens = [t for t in hint_norm.split(" ") if t and t not in _LOCATION_HINT_SMALL_WORDS]
+        if not hint_tokens:
+            return True
+        for existing in existing_norms:
+            if not existing:
+                continue
+            if hint_norm in existing or existing in hint_norm:
+                return True
+            existing_tokens = {t for t in existing.split(" ") if t and t not in _LOCATION_HINT_SMALL_WORDS}
+            overlap = sum(1 for token in hint_tokens if token in existing_tokens)
+            if overlap >= max(2, len(hint_tokens) - 1):
+                return True
+        return False
+
+    def _clean_location_hint_phrase(self, text: str) -> str:
+        tokens = [t for t in str(text or "").strip().split(" ") if t]
+        if not tokens:
+            return ""
+
+        while tokens and tokens[-1] in _LOCATION_HINT_TRAILING_STOPWORDS:
+            tokens.pop()
+        if len(tokens) < 2:
+            return ""
+
+        out_words: list[str] = []
+        for idx, token in enumerate(tokens[:8]):
+            if idx > 0 and token in _LOCATION_HINT_SMALL_WORDS:
+                out_words.append(token)
+            else:
+                out_words.append(token.capitalize())
+        return " ".join(out_words).strip()
+
+    def _retone_generated_title(self, title: str, *, target_anchor: str) -> str:
+        raw_title = str(title or "").strip()
+        if not raw_title:
+            return raw_title
+
+        norm = _norm_text_token(raw_title)
+
+        prefix = raw_title
+        suffix = ""
+        if " - " in raw_title:
+            prefix, suffix = raw_title.split(" - ", 1)
+            prefix = prefix.strip()
+            suffix = suffix.strip()
+
+        category: dict[str, object] | None = None
+        for rule in _LOCATION_RESONANCE_RULES:
+            tokens = rule.get("tokens")
+            if not isinstance(tokens, tuple):
+                continue
+            if any(str(token) in norm for token in tokens):
+                category = rule
+                break
+        if category is None:
+            return raw_title
+
+        suffix_norm = _norm_text_token(suffix)
+        title_norm = _norm_text_token(raw_title)
+        short_core = suffix_norm if suffix else title_norm
+        bland = False
+
+        if suffix and suffix_norm in _GENERIC_LOCATION_SUFFIXES:
+            bland = True
+        if not suffix and title_norm in _GENERIC_LOCATION_SUFFIXES:
+            bland = True
+
+        if suffix:
+            words = [w for w in suffix_norm.split(" ") if w]
+            if words and len(words) <= 3 and all(w in _GENERIC_LOCATION_WORDS for w in words):
+                bland = True
+
+        category_tokens = category.get("tokens")
+        if isinstance(category_tokens, tuple):
+            if any(short_core == str(token) for token in category_tokens):
+                bland = True
+
+        if not bland:
+            return raw_title
+
+        category_key = str(category.get("key") or "lieu")
+        category_label = str(category.get("label") or prefix or "Lieu").strip() or "Lieu"
+        flavors = category.get("flavors")
+        if not isinstance(flavors, list) or not flavors:
+            return raw_title
+
+        stable_prefix = prefix or category_label
+        stable_suffix = str(suffix or short_core or "").strip()
+        seed = f"loc_title::{category_key}::{target_anchor}::{stable_prefix.casefold()}::{stable_suffix.casefold()}"
+        rng = random.Random(seed)
+        flavored = str(flavors[rng.randrange(len(flavors))]).strip()
+        if not flavored:
+            return raw_title
+        return f"{stable_prefix} - {flavored}".strip(" -")
 
     def _extract_json(self, text: str) -> str:
         s = (text or "").strip()

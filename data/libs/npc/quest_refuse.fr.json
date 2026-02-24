@@ -1,0 +1,14 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Repliques refus de quete"
+  },
+  "entries": {
+    "npc.quest.refuse.default": [
+      "Dommage. Peut-etre une autre fois.",
+      "Je comprends, mais le temps presse.",
+      "Tres bien, je trouverai une autre solution."
+    ]
+  }
+}

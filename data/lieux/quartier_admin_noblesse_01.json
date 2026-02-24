@@ -1,0 +1,7 @@
+{
+  "id": "quartier_admin_noblesse_01",
+  "title": "Quartier administratif - Esplanade de marbre",
+  "narrator_text": "Ataryxia : Des colonnades blanches, des gardes rigides et des murmures d'intrigue rythment ce quartier du pouvoir.",
+  "npcs": ["Clerc du conseil", "Messager royal", "Dame noble"],
+  "choices": []
+}

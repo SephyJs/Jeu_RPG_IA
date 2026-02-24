@@ -1,0 +1,99 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Messages d'erreur utilisateur"
+  },
+  "entries": {
+    "error.invalid_move": [
+      "Deplacement invalide."
+    ],
+    "error.invalid_move_obsolete": [
+      "Deplacement invalide ou obsolete."
+    ],
+    "error.location_closed": [
+      "Ce lieu est ferme pour le moment."
+    ],
+    "error.no_npc_in_scene": [
+      "Aucun PNJ disponible dans ce lieu."
+    ],
+    "error.npc_not_found": [
+      "PNJ introuvable dans ce lieu."
+    ],
+    "error.npc.none_selected": [
+      "Aucun PNJ selectionne. Utilise le bouton PNJ."
+    ],
+    "error.combat_active_buttons": [
+      "Combat en cours: utilise les actions de combat."
+    ],
+    "error.skill.none_known": [
+      "Aucune competence apprise pour agir hors combat."
+    ],
+    "error.skill.no_heal_outside": [
+      "Aucun sort de soin disponible hors combat."
+    ],
+    "error.skill.no_support_outside": [
+      "Aucun sort de soutien disponible hors combat."
+    ],
+    "error.skill.no_usable_outside": [
+      "Aucune competence de soutien utilisable hors combat."
+    ],
+    "error.consumable.invalid": [
+      "Consommable invalide."
+    ],
+    "error.consumable.unavailable": [
+      "Objet indisponible dans l'inventaire."
+    ],
+    "error.consumable.not_consumable": [
+      "Cet objet n'est pas un consommable."
+    ],
+    "error.consumable.no_effect": [
+      "Ce consommable n'a pas d'effet utilisable."
+    ],
+    "error.consumable.no_mana_pool": [
+      "Pas de reserve de mana."
+    ],
+    "error.sheet.missing": [
+      "Fiche joueur absente."
+    ],
+    "error.consumable.none_applied": [
+      "Aucun effet n'a ete applique."
+    ],
+    "error.consumable.inventory_fail": [
+      "Impossible de consommer cet objet (inventaire)."
+    ],
+    "error.ai.failure": [
+      "Erreur IA: {error}"
+    ],
+    "error.creation.busy": [
+      "Creation en cours, reessaie dans un instant."
+    ],
+    "error.bot.chat_not_found": [
+      "Chat Telegram introuvable."
+    ],
+    "error.bot.session_manager_unavailable": [
+      "Telegram session manager indisponible."
+    ],
+    "error.bot.slot_invalid": [
+      "Slot invalide. Exemple: /slot 1"
+    ],
+    "error.bot.profile_usage": [
+      "Usage: /useprofile <profil_key>"
+    ],
+    "error.bot.slot_usage": [
+      "Usage: /slot <numero>"
+    ],
+    "error.telegram.token_invalid": [
+      "Token Telegram invalide."
+    ],
+    "error.telegram.no_token_configured": [
+      "Aucun token valide configure. Utilise /telegram <TOKEN>."
+    ],
+    "error.telegram.bot_start_failed": [
+      "Echec du lancement du bot: {error}"
+    ],
+    "error.telegram.bot_not_running": [
+      "Aucun bot Telegram actif pour ce profil."
+    ]
+  }
+}

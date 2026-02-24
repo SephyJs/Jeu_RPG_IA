@@ -1,19 +1,38 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 import json
+import os
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+import re
+import tempfile
+import unicodedata
+from typing import Iterator
 
 from app.gamemaster.conversation_memory import (
     sanitize_global_memory_payload,
     sanitize_long_term_payload,
     sanitize_short_term_payload,
 )
+from app.core.engine import (
+    normalize_trade_session,
+    normalize_travel_state,
+    trade_session_from_legacy_pending_trade,
+    trade_session_to_dict,
+    travel_state_to_dict,
+)
 from app.gamemaster.location_manager import MAP_ANCHORS
-from app.gamemaster.npc_manager import normalize_profile_role_in_place
-from app.ui.state.game_state import ChatMessage, Choice, GameState, Scene
+from app.gamemaster.npc_manager import normalize_profile_extensions_in_place, normalize_profile_role_in_place
+from app.core.models import ChatMessage, Choice, Scene
+from app.ui.state.game_state import CHAT_HISTORY_MAX_ITEMS, GameState
 from app.ui.state.inventory import InventoryGrid, ItemStack
+
+
+_SAVE_SCHEMA_VERSION = 2
+_BACKUP_SUFFIX = ".bak"
+_LOCKFILE_NAME = ".save.lock"
 
 
 class SaveManager:
@@ -21,60 +40,275 @@ class SaveManager:
         self.saves_dir = Path(saves_dir)
         self.slot_count = max(1, int(slot_count))
         self.saves_dir.mkdir(parents=True, exist_ok=True)
+        self.profiles_dir = self.saves_dir / "profiles"
+        self.profiles_dir.mkdir(parents=True, exist_ok=True)
         self.meta_path = self.saves_dir / "meta.json"
         self._known_anchors = set(MAP_ANCHORS)
+        self.last_warning: str = ""
 
-    def slot_path(self, slot: int) -> Path:
-        return self.saves_dir / f"slot_{slot}.json"
+    def normalize_profile_id(self, profile: str) -> str:
+        text = str(profile or "").strip()
+        if not text:
+            return "joueur"
+        normalized = unicodedata.normalize("NFKD", text)
+        ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
+        key = re.sub(r"[^a-zA-Z0-9_-]+", "_", ascii_text.casefold()).strip("_")
+        return (key[:64] or "joueur")
 
-    def get_last_slot(self, default: int = 1) -> int:
+    def _profile_dir(self, profile: str | None) -> Path:
+        if profile is None:
+            return self.saves_dir
+        key = self.normalize_profile_id(profile)
+        target = self.profiles_dir / key
+        target.mkdir(parents=True, exist_ok=True)
+        return target
+
+    def _meta_path_for(self, profile: str | None = None) -> Path:
+        if profile is None:
+            return self.meta_path
+        return self._profile_dir(profile) / "meta.json"
+
+    def slot_path(self, slot: int, profile: str | None = None) -> Path:
+        return self._profile_dir(profile) / f"slot_{slot}.json"
+
+    def _backup_path(self, path: Path) -> Path:
+        return path.with_name(path.name + _BACKUP_SUFFIX)
+
+    def _lock_path_for(self, profile: str | None = None) -> Path:
+        base_dir = self._profile_dir(profile) if profile is not None else self.saves_dir
+        return base_dir / _LOCKFILE_NAME
+
+    @contextmanager
+    def _file_lock(self, profile: str | None = None) -> Iterator[None]:
+        lock_path = self._lock_path_for(profile)
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with lock_path.open("a+", encoding="utf-8") as lock_fp:
+            try:
+                lock_fp.seek(0)
+                lock_fp.write("0")
+                lock_fp.flush()
+                lock_fp.seek(0)
+            except Exception:
+                pass
+            try:
+                if os.name == "nt":
+                    import msvcrt  # type: ignore
+
+                    msvcrt.locking(lock_fp.fileno(), msvcrt.LK_LOCK, 1)
+                else:
+                    import fcntl  # type: ignore
+
+                    fcntl.flock(lock_fp.fileno(), fcntl.LOCK_EX)
+            except Exception:
+                # Best effort: continue even if lock backend is unavailable.
+                pass
+            try:
+                yield
+            finally:
+                try:
+                    if os.name == "nt":
+                        import msvcrt  # type: ignore
+
+                        msvcrt.locking(lock_fp.fileno(), msvcrt.LK_UNLCK, 1)
+                    else:
+                        import fcntl  # type: ignore
+
+                        fcntl.flock(lock_fp.fileno(), fcntl.LOCK_UN)
+                except Exception:
+                    pass
+
+    def _atomic_write_text(self, path: Path, content: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=str(path.parent),
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as tmp:
+            tmp.write(content)
+            tmp.flush()
+            os.fsync(tmp.fileno())
+            tmp_path = Path(tmp.name)
+        os.replace(tmp_path, path)
+
+    def _read_json_file(self, path: Path) -> dict | list | None:
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    def _write_json_file(self, path: Path, payload: dict, *, backup: bool) -> None:
+        if backup and path.exists():
+            backup_path = self._backup_path(path)
+            try:
+                self._atomic_write_text(backup_path, path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        self._atomic_write_text(path, json.dumps(payload, ensure_ascii=False, indent=2))
+
+    def _load_payload_with_backup(self, path: Path) -> tuple[dict | None, bool]:
+        payload = self._read_json_file(path)
+        if isinstance(payload, dict):
+            return payload, False
+
+        backup_path = self._backup_path(path)
+        backup_payload = self._read_json_file(backup_path)
+        if not isinstance(backup_payload, dict):
+            return None, False
+
+        restored = False
+        try:
+            self._atomic_write_text(path, backup_path.read_text(encoding="utf-8"))
+            restored = True
+        except Exception:
+            restored = False
+        return backup_payload, restored
+
+    def profile_has_data(self, profile: str) -> bool:
+        key = self.normalize_profile_id(profile)
+        profile_dir = self.profiles_dir / key
+        if not profile_dir.exists():
+            return False
+        for i in range(1, self.slot_count + 1):
+            if (profile_dir / f"slot_{i}.json").exists():
+                return True
+        return False
+
+    def list_profiles(self) -> list[dict]:
+        profiles: list[dict] = []
+        if not self.profiles_dir.exists():
+            return profiles
+        for child in self.profiles_dir.iterdir():
+            if not child.is_dir():
+                continue
+            key = child.name
+            meta_path = child / "meta.json"
+            display_name = key
+            updated_at = ""
+            if meta_path.exists():
+                try:
+                    raw = self._read_json_file(meta_path)
+                    if isinstance(raw, dict):
+                        display_name = str(raw.get("display_name") or raw.get("profile_name") or key).strip() or key
+                        updated_at = str(raw.get("updated_at") or "")
+                except Exception:
+                    pass
+            has_slot = any((child / f"slot_{i}.json").exists() for i in range(1, self.slot_count + 1))
+            if not has_slot:
+                continue
+            profiles.append(
+                {
+                    "profile_key": key,
+                    "display_name": display_name[:80],
+                    "updated_at": updated_at,
+                }
+            )
+        profiles.sort(key=lambda p: str(p.get("updated_at") or ""), reverse=True)
+        return profiles
+
+    def has_legacy_saves(self) -> bool:
+        for i in range(1, self.slot_count + 1):
+            if (self.saves_dir / f"slot_{i}.json").exists():
+                return True
+        return False
+
+    def migrate_legacy_saves_to_profile(self, profile: str, *, display_name: str | None = None) -> int:
+        profile_key = self.normalize_profile_id(profile)
+        target_dir = self._profile_dir(profile_key)
+        migrated = 0
+        for i in range(1, self.slot_count + 1):
+            src = self.saves_dir / f"slot_{i}.json"
+            dst = target_dir / f"slot_{i}.json"
+            if not src.exists() or dst.exists():
+                continue
+            try:
+                self._atomic_write_text(dst, src.read_text(encoding="utf-8"))
+                migrated += 1
+            except Exception:
+                continue
+        if migrated > 0:
+            legacy_last = self.get_last_slot(default=1, profile=None)
+            self.set_last_slot(legacy_last, profile=profile_key, display_name=display_name)
+        return migrated
+
+    def get_last_slot(self, default: int = 1, *, profile: str | None = None) -> int:
         default_slot = self._clamp_slot(default)
-        if not self.meta_path.exists():
+        meta_path = self._meta_path_for(profile)
+        if not meta_path.exists():
             return default_slot
         try:
-            raw = json.loads(self.meta_path.read_text(encoding="utf-8"))
+            raw = self._read_json_file(meta_path)
+            if not isinstance(raw, dict):
+                return default_slot
             return self._clamp_slot(int(raw.get("last_slot", default_slot)))
         except Exception:
             return default_slot
 
-    def set_last_slot(self, slot: int) -> None:
+    def set_last_slot(self, slot: int, *, profile: str | None = None, display_name: str | None = None) -> None:
+        with self._file_lock(profile):
+            self._set_last_slot_unlocked(slot, profile=profile, display_name=display_name)
+
+    def _set_last_slot_unlocked(self, slot: int, *, profile: str | None = None, display_name: str | None = None) -> None:
         chosen = self._clamp_slot(slot)
+        meta_path = self._meta_path_for(profile)
+        profile_name = str(display_name or profile or "").strip()
         payload = {
             "last_slot": chosen,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
-        self.meta_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        if profile is not None:
+            payload["profile_key"] = self.normalize_profile_id(profile)
+            if profile_name:
+                payload["display_name"] = profile_name[:80]
+        self._write_json_file(meta_path, payload, backup=True)
 
-    def save_slot(self, slot: int, state: GameState) -> None:
+    def save_slot(
+        self,
+        slot: int,
+        state: GameState,
+        *,
+        profile: str | None = None,
+        display_name: str | None = None,
+    ) -> None:
         chosen = self._clamp_slot(slot)
         payload = {
-            "version": 1,
+            "version": _SAVE_SCHEMA_VERSION,
             "saved_at": datetime.now(timezone.utc).isoformat(),
             "state": self._state_to_dict(state),
         }
-        self.slot_path(chosen).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        self.set_last_slot(chosen)
+        path = self.slot_path(chosen, profile=profile)
+        with self._file_lock(profile):
+            self._write_json_file(path, payload, backup=True)
+            self._set_last_slot_unlocked(chosen, profile=profile, display_name=display_name)
 
-    def load_slot(self, slot: int, state: GameState) -> bool:
+    def load_slot(self, slot: int, state: GameState, *, profile: str | None = None) -> bool:
         chosen = self._clamp_slot(slot)
-        path = self.slot_path(chosen)
+        path = self.slot_path(chosen, profile=profile)
         if not path.exists():
             return False
 
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            raw_state = payload.get("state", {}) if isinstance(payload, dict) else {}
+        self.last_warning = ""
+        with self._file_lock(profile):
+            payload, restored = self._load_payload_with_backup(path)
+            if not isinstance(payload, dict):
+                return False
+            raw_state = payload.get("state", {})
             if not isinstance(raw_state, dict):
                 return False
-            self._apply_state_dict(state, raw_state)
-            self.set_last_slot(chosen)
+            try:
+                self._apply_state_dict(state, raw_state)
+            except Exception:
+                return False
+            self._set_last_slot_unlocked(chosen, profile=profile)
+            if restored:
+                self.last_warning = "Sauvegarde restaurée depuis backup après corruption du fichier principal."
             return True
-        except Exception:
-            return False
 
-    def slot_summary(self, slot: int) -> dict:
+    def slot_summary(self, slot: int, *, profile: str | None = None) -> dict:
         chosen = self._clamp_slot(slot)
-        path = self.slot_path(chosen)
+        path = self.slot_path(chosen, profile=profile)
         if not path.exists():
             return {
                 "slot": chosen,
@@ -85,7 +319,9 @@ class SaveManager:
             }
 
         try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
+            payload, _ = self._load_payload_with_backup(path)
+            if not isinstance(payload, dict):
+                raise ValueError("payload invalide")
             raw_state = payload.get("state", {}) if isinstance(payload, dict) else {}
             scene_id = str(raw_state.get("current_scene_id") or "inconnu")
             chat = raw_state.get("chat", []) if isinstance(raw_state, dict) else []
@@ -105,11 +341,15 @@ class SaveManager:
                 "messages": 0,
             }
 
-    def delete_slot(self, slot: int) -> None:
+    def delete_slot(self, slot: int, *, profile: str | None = None) -> None:
         chosen = self._clamp_slot(slot)
-        path = self.slot_path(chosen)
-        if path.exists():
-            path.unlink()
+        path = self.slot_path(chosen, profile=profile)
+        backup_path = self._backup_path(path)
+        with self._file_lock(profile):
+            if path.exists():
+                path.unlink()
+            if backup_path.exists():
+                backup_path.unlink()
 
     def _clamp_slot(self, slot: int) -> int:
         value = int(slot)
@@ -125,11 +365,16 @@ class SaveManager:
             "scenes": self._scenes_to_dict(state),
             "current_scene_id": state.current_scene_id,
             "scene_narrator_texts": {sid: scene.narrator_text for sid, scene in state.scenes.items()},
-            "chat": [asdict(msg) for msg in state.chat],
+            "chat": [asdict(msg) for msg in state.chat[-CHAT_HISTORY_MAX_ITEMS:]],
             "chat_draft": state.chat_draft,
             "selected_npc": state.selected_npc,
+            "pending_choice_options": state.pending_choice_options,
+            "pending_choice_prompt": state.pending_choice_prompt,
+            "pending_choice_source_npc_key": state.pending_choice_source_npc_key,
+            "pending_choice_created_at": state.pending_choice_created_at,
             "left_panel_tab": state.left_panel_tab,
             "world_time_minutes": int(getattr(state, "world_time_minutes", 0)),
+            "world_state": dict(state.world_state) if isinstance(getattr(state, "world_state", None), dict) else {},
             "player_sheet": state.player_sheet,
             "player_sheet_ready": bool(state.player_sheet_ready),
             "player_sheet_missing": list(state.player_sheet_missing),
@@ -137,6 +382,7 @@ class SaveManager:
             "player_progress_log": state.player_progress_log,
             "player_skills": state.player_skills,
             "skill_points": int(state.skill_points),
+            "player_corruption_level": int(getattr(state, "player_corruption_level", 0)),
             "skill_training_in_progress": False,
             "skill_training_log": state.skill_training_log,
             "skill_passive_practice": state.skill_passive_practice,
@@ -168,7 +414,22 @@ class SaveManager:
             "conversation_short_term": state.conversation_short_term,
             "conversation_long_term": state.conversation_long_term,
             "conversation_global_long_term": state.conversation_global_long_term,
-            "gm_state": state.gm_state,
+            "faction_reputation": state.faction_reputation,
+            "faction_reputation_log": state.faction_reputation_log,
+            "faction_states": dict(state.faction_states) if isinstance(getattr(state, "faction_states", None), dict) else {},
+            "trade_session": trade_session_to_dict(normalize_trade_session(getattr(state, "trade_session", None))),
+            "travel_state": travel_state_to_dict(normalize_travel_state(getattr(state, "travel_state", None))),
+            "gm_flags": dict(state.gm_state.get("flags", {})) if isinstance(state.gm_state, dict) else {},
+            "gm_last_trade": (
+                state.gm_state.get("last_trade")
+                if isinstance(state.gm_state, dict) and isinstance(state.gm_state.get("last_trade"), dict)
+                else None
+            ),
+            "gm_pending_trade": (
+                state.gm_state.get("pending_trade")
+                if isinstance(state.gm_state, dict) and isinstance(state.gm_state.get("pending_trade"), dict)
+                else None
+            ),
         }
 
     def _apply_state_dict(self, state: GameState, raw: dict) -> None:
@@ -202,7 +463,7 @@ class SaveManager:
         chat_raw = raw.get("chat", [])
         state.chat = []
         if isinstance(chat_raw, list):
-            for item in chat_raw:
+            for item in chat_raw[-CHAT_HISTORY_MAX_ITEMS:]:
                 if not isinstance(item, dict):
                     continue
                 speaker = item.get("speaker")
@@ -215,6 +476,15 @@ class SaveManager:
         selected_npc = raw.get("selected_npc")
         state.selected_npc = selected_npc if isinstance(selected_npc, str) else None
 
+        pending_choice_options = raw.get("pending_choice_options")
+        if isinstance(pending_choice_options, list):
+            state.pending_choice_options = [row for row in pending_choice_options if isinstance(row, dict)][:3]
+        else:
+            state.pending_choice_options = []
+        state.pending_choice_prompt = str(raw.get("pending_choice_prompt") or "")[:220]
+        state.pending_choice_source_npc_key = str(raw.get("pending_choice_source_npc_key") or "")[:180]
+        state.pending_choice_created_at = str(raw.get("pending_choice_created_at") or "")[:40]
+
         left_tab = raw.get("left_panel_tab")
         if isinstance(left_tab, str) and left_tab:
             state.left_panel_tab = left_tab
@@ -224,6 +494,12 @@ class SaveManager:
             state.world_time_minutes = max(0, world_time_minutes)
         else:
             state.world_time_minutes = max(0, int(getattr(state, "world_time_minutes", 0)))
+        world_state = raw.get("world_state")
+        if isinstance(world_state, dict):
+            state.world_state = dict(world_state)
+        else:
+            state.world_state = {}
+        state.sync_world_state()
 
         player_sheet = raw.get("player_sheet")
         state.player_sheet = player_sheet if isinstance(player_sheet, dict) else {}
@@ -252,6 +528,11 @@ class SaveManager:
 
         skill_points = raw.get("skill_points")
         state.skill_points = max(0, int(skill_points)) if isinstance(skill_points, int) else 1
+        player_corruption_level = raw.get("player_corruption_level")
+        if isinstance(player_corruption_level, int):
+            state.player_corruption_level = max(0, min(100, int(player_corruption_level)))
+        else:
+            state.player_corruption_level = 0
         state.skill_training_in_progress = False
 
         skill_training_log = raw.get("skill_training_log")
@@ -361,6 +642,7 @@ class SaveManager:
             if not fallback_label:
                 fallback_label = str(key).split("__")[-1].replace("_", " ").strip() or "PNJ"
             normalize_profile_role_in_place(profile, fallback_label)
+            normalize_profile_extensions_in_place(profile, fallback_label=fallback_label)
 
         registry_raw = raw.get("npc_registry")
         if isinstance(registry_raw, dict):
@@ -463,10 +745,88 @@ class SaveManager:
             raw.get("conversation_global_long_term")
         )
 
-        gm_state = raw.get("gm_state", {})
-        state.gm_state = gm_state if isinstance(gm_state, dict) else {"player_name": "l'Éveillé", "location": "inconnu", "flags": {}}
+        raw_rep = raw.get("faction_reputation")
+        if isinstance(raw_rep, dict):
+            rep_out: dict[str, int] = {}
+            for key, value in raw_rep.items():
+                if not isinstance(key, str):
+                    continue
+                try:
+                    score = int(value)
+                except (TypeError, ValueError):
+                    continue
+                rep_out[key[:80]] = max(-100, min(100, score))
+            state.faction_reputation = rep_out
+        else:
+            state.faction_reputation = {}
 
-        state.gm_state.setdefault("flags", {})
+        raw_rep_log = raw.get("faction_reputation_log")
+        if isinstance(raw_rep_log, list):
+            logs: list[dict] = []
+            for entry in raw_rep_log[-200:]:
+                if isinstance(entry, dict):
+                    logs.append(dict(entry))
+            state.faction_reputation_log = logs
+        else:
+            state.faction_reputation_log = []
+
+        raw_faction_states = raw.get("faction_states")
+        if isinstance(raw_faction_states, dict):
+            cleaned_states: dict[str, dict] = {}
+            def _safe_score(value: object, default: int) -> int:
+                try:
+                    return max(0, min(100, int(value)))
+                except (TypeError, ValueError):
+                    return max(0, min(100, int(default)))
+            for raw_name, raw_payload in raw_faction_states.items():
+                faction = str(raw_name or "").strip()[:64]
+                if not faction or not isinstance(raw_payload, dict):
+                    continue
+                cleaned_states[faction] = {
+                    "power_level": _safe_score(raw_payload.get("power_level"), 40),
+                    "brutality_index": _safe_score(raw_payload.get("brutality_index"), 35),
+                    "corruption_index": _safe_score(raw_payload.get("corruption_index"), 30),
+                    "relations": dict(raw_payload.get("relations") or {}),
+                }
+            state.faction_states = cleaned_states
+        else:
+            state.faction_states = {}
+
+        raw_trade_session = raw.get("trade_session")
+        state.trade_session = normalize_trade_session(raw_trade_session)
+        state.travel_state = normalize_travel_state(raw.get("travel_state"))
+
+        legacy_gm_state = raw.get("gm_state")
+        raw_flags = raw.get("gm_flags")
+        if not isinstance(raw_flags, dict) and isinstance(legacy_gm_state, dict):
+            maybe_flags = legacy_gm_state.get("flags")
+            raw_flags = maybe_flags if isinstance(maybe_flags, dict) else {}
+        flags = raw_flags if isinstance(raw_flags, dict) else {}
+
+        scene = state.scenes.get(state.current_scene_id)
+        state.gm_state = {
+            "player_name": str(getattr(state.player, "name", "l'Éveillé") or "l'Éveillé"),
+            "location": str(scene.title if scene else "inconnu"),
+            "location_id": str(scene.id if scene else state.current_scene_id or "inconnu"),
+            "map_anchor": str(scene.map_anchor if scene else ""),
+            "world_time_minutes": max(0, int(getattr(state, "world_time_minutes", 0))),
+            "flags": dict(flags),
+        }
+        raw_last_trade = raw.get("gm_last_trade")
+        if not isinstance(raw_last_trade, dict) and isinstance(legacy_gm_state, dict):
+            maybe_trade = legacy_gm_state.get("last_trade")
+            raw_last_trade = maybe_trade if isinstance(maybe_trade, dict) else None
+        if isinstance(raw_last_trade, dict):
+            state.gm_state["last_trade"] = dict(raw_last_trade)
+        raw_pending_trade = raw.get("gm_pending_trade")
+        if not isinstance(raw_pending_trade, dict) and isinstance(legacy_gm_state, dict):
+            maybe_pending = legacy_gm_state.get("pending_trade")
+            raw_pending_trade = maybe_pending if isinstance(maybe_pending, dict) else None
+        if isinstance(raw_pending_trade, dict):
+            state.gm_state["pending_trade"] = dict(raw_pending_trade)
+            if state.trade_session.status == "idle":
+                state.trade_session = normalize_trade_session(trade_session_from_legacy_pending_trade(raw_pending_trade))
+        state.gm_state["trade_session"] = trade_session_to_dict(state.trade_session)
         state.gm_state["npc_profiles"] = state.npc_profiles
 
         state.npc_generation_in_progress.clear()

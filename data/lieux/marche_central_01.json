@@ -1,0 +1,7 @@
+{
+  "id": "marche_central_01",
+  "title": "Marche central - Hall des etals",
+  "narrator_text": "Ataryxia : Fruits, tissus, epices et rumeurs changent de main a chaque coin d'allee.",
+  "npcs": ["Marchand", "Poissonniere", "Courtier"],
+  "choices": []
+}

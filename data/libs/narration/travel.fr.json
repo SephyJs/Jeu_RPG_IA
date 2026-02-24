@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Narration de deplacement"
+  },
+  "entries": {
+    "narration.travel.arrival": [
+      "➡️ Vous arrivez : {destination}"
+    ],
+    "narration.travel.closed": [
+      "🚪 {reason}"
+    ],
+    "narration.travel.default_closed": [
+      "Ce lieu est ferme pour le moment."
+    ]
+  }
+}

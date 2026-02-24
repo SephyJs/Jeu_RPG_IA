@@ -1,0 +1,7 @@
+{
+  "id": "observatoire_01",
+  "title": "Observatoire - Salle des astres",
+  "narrator_text": "Ataryxia : Les lentilles de bronze suivent le ciel pendant que les astrologues notent leurs presages.",
+  "npcs": ["Astrologue", "Calculateur", "Veilleuse"],
+  "choices": []
+}

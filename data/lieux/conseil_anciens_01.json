@@ -1,0 +1,7 @@
+{
+  "id": "conseil_anciens_01",
+  "title": "Conseil des anciens - Salle de deliberation",
+  "narrator_text": "Ataryxia : Des voix feutrees debattent de lois et de pactes sous un dome austere.",
+  "npcs": ["Magistrat", "Scribe officiel", "Doyen"],
+  "choices": []
+}

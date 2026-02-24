@@ -1,0 +1,7 @@
+{
+  "id": "maison_de_plaisir_01",
+  "title": "Maison de plaisir - Le Baiser de Velours",
+  "narrator_text": "Ataryxia : Tentures carmin, parfums capiteux et murmures de couloir composent un lieu reserve aux adultes avertis.",
+  "npcs": ["Hotesse elfe", "Courtisan humain", "Geisha fee", "Succube demonide"],
+  "choices": []
+}

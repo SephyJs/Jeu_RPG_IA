@@ -1,41 +1,30 @@
 from __future__ import annotations
-from app.ui.state.inventory import InventoryGrid, ItemStack
+from app.ui.state.inventory import InventoryGrid
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 import time
 
+from app.core.engine import (
+    TradeSession,
+    TravelState,
+    idle_trade_session,
+    idle_travel_state,
+    normalize_trade_session,
+    normalize_travel_state,
+)
+from app.core.models import ChatMessage, Choice, PlayerProfile, Scene
 
-@dataclass(frozen=True)
-class Choice:
-    id: str
-    label: str
-    next_scene_id: Optional[str] = None
+CHAT_HISTORY_MAX_ITEMS = 600
+_DAY_MINUTES = 24 * 60
 
-
-@dataclass
-class Scene:
-    id: str
-    title: str
-    narrator_text: str
-    map_anchor: str = ""
-    generated: bool = False
-    npc_names: List[str] = field(default_factory=list)
-    choices: List[Choice] = field(default_factory=list)
-
-
-@dataclass
-class ChatMessage:
-    speaker: str
-    text: str
-
-
-@dataclass
-class PlayerProfile:
-    name: str = "L'Éveillé"
-    hp: int = 20
-    max_hp: int = 20
-    gold: int = 10
+__all__ = [
+    "GameState",
+    "Scene",
+    "Choice",
+    "ChatMessage",
+    "PlayerProfile",
+]
 
 
 @dataclass
@@ -45,7 +34,12 @@ class GameState:
     current_scene_id: str = "city"
     chat: List[ChatMessage] = field(default_factory=list)
     chat_draft: str = ""
+    chat_turn_in_progress: bool = False
     selected_npc: Optional[str] = None
+    pending_choice_options: List[dict] = field(default_factory=list)
+    pending_choice_prompt: str = ""
+    pending_choice_source_npc_key: str = ""
+    pending_choice_created_at: str = ""
     npc_profiles: Dict[str, dict] = field(default_factory=dict)
     npc_registry: Dict[str, dict] = field(default_factory=dict)
     npc_scene_bindings: Dict[str, str] = field(default_factory=dict)
@@ -54,6 +48,14 @@ class GameState:
     discovered_scene_ids: set[str] = field(default_factory=set)
     discovered_anchors: set[str] = field(default_factory=set)
     anchor_last_scene: Dict[str, str] = field(default_factory=dict)
+    world_state: dict = field(
+        default_factory=lambda: {
+            "time_of_day": "morning",
+            "day_counter": 1,
+            "global_tension": 18,
+            "instability_level": 12,
+        }
+    )
     dungeon_profiles: Dict[str, dict] = field(default_factory=dict)
     active_dungeon_run: dict | None = None
     dungeon_generation_in_progress: bool = False
@@ -73,6 +75,7 @@ class GameState:
     player_progress_log: List[dict] = field(default_factory=list)
     player_skills: List[dict] = field(default_factory=list)
     skill_points: int = 1
+    player_corruption_level: int = 0
     skill_training_in_progress: bool = False
     skill_training_log: List[dict] = field(default_factory=list)
     skill_passive_practice: Dict[str, dict] = field(default_factory=dict)
@@ -99,6 +102,11 @@ class GameState:
     conversation_short_term: Dict[str, List[dict]] = field(default_factory=dict)
     conversation_long_term: Dict[str, List[dict]] = field(default_factory=dict)
     conversation_global_long_term: List[dict] = field(default_factory=list)
+    faction_reputation: Dict[str, int] = field(default_factory=dict)
+    faction_reputation_log: List[dict] = field(default_factory=list)
+    faction_states: Dict[str, dict] = field(default_factory=dict)
+    trade_session: TradeSession = field(default_factory=idle_trade_session)
+    travel_state: TravelState = field(default_factory=idle_travel_state)
     # Temps de monde persistant (minutes écoulées depuis l'epoch fantasy du jeu).
     world_time_minutes: int = (2 * 24 * 60) + (8 * 60)
 
@@ -120,6 +128,8 @@ class GameState:
 
     def push(self, speaker: str, text: str, *, count_for_media: bool = True) -> None:
         self.chat.append(ChatMessage(speaker=speaker, text=text))
+        if len(self.chat) > CHAT_HISTORY_MAX_ITEMS:
+            del self.chat[:-CHAT_HISTORY_MAX_ITEMS]
         if count_for_media:
             self.narrator_messages_since_last_media += 1
 
@@ -133,13 +143,49 @@ class GameState:
         if scene.map_anchor:
             self.discovered_anchors.add(scene.map_anchor)
             self.anchor_last_scene[scene.map_anchor] = scene_id
+        self.sync_world_state()
 
     def advance_world_time(self, minutes: int) -> int:
         delta = max(0, int(minutes))
         if delta <= 0:
             return 0
         self.world_time_minutes = max(0, int(self.world_time_minutes) + delta)
+        self.sync_world_state(drift_minutes=delta)
         return delta
+
+    def sync_travel_state(self) -> None:
+        self.travel_state = normalize_travel_state(getattr(self, "travel_state", None))
+
+    def sync_trade_session(self) -> None:
+        self.trade_session = normalize_trade_session(getattr(self, "trade_session", None))
+
+    def sync_world_state(self, *, drift_minutes: int = 0) -> None:
+        if not isinstance(self.world_state, dict):
+            self.world_state = {}
+        ws = self.world_state
+
+        total_minutes = max(0, int(self.world_time_minutes))
+        minute_of_day = total_minutes % _DAY_MINUTES
+        hour = minute_of_day // 60
+        if 5 <= hour < 12:
+            ws["time_of_day"] = "morning"
+        elif 12 <= hour < 18:
+            ws["time_of_day"] = "afternoon"
+        elif 18 <= hour < 23:
+            ws["time_of_day"] = "nightfall"
+        else:
+            ws["time_of_day"] = "night"
+
+        ws["day_counter"] = max(1, (total_minutes // _DAY_MINUTES) + 1)
+        ws["global_tension"] = max(0, min(100, int(ws.get("global_tension") or 18)))
+        ws["instability_level"] = max(0, min(100, int(ws.get("instability_level") or 12)))
+
+        drift = max(0, int(drift_minutes))
+        if drift > 0:
+            instability_gain = min(4, max(0, drift // 180))
+            ws["instability_level"] = max(0, min(100, int(ws["instability_level"]) + instability_gain))
+            tension_gain = 1 if drift >= 180 else 0
+            ws["global_tension"] = max(0, min(100, int(ws["global_tension"]) + tension_gain))
 
     def set_narrator_video(self, video_url: str, duration_s: float = 8.0) -> None:
         self.narrator_media_url = video_url

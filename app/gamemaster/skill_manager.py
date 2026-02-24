@@ -43,6 +43,7 @@ _ACTION_VERBS = (
     "emploie",
     "travaille",
     "pratique",
+    "pratiquer",
     "execute",
     "exécute",
     "fais",
@@ -55,6 +56,14 @@ _ACTION_VERBS = (
     "apprend",
     "entraîne",
     "entraine",
+    "entrainer",
+    "entrainement",
+    "exerce",
+    "exercer",
+    "repete",
+    "repetition",
+    "drill",
+    "sparring",
 )
 
 _INTENT_STOPWORDS = {
@@ -122,6 +131,32 @@ _INTENT_STOPWORDS = {
     "encore",
     "souvent",
     "toujours",
+    "entraine",
+    "entrainer",
+    "entrainement",
+    "pratique",
+    "pratiquer",
+    "exerce",
+    "exercer",
+    "repete",
+    "repetition",
+    "drill",
+    "sparring",
+    "ennemi",
+    "ennemis",
+    "adversaire",
+    "adversaires",
+    "cible",
+    "cibles",
+    "monstre",
+    "monstres",
+    "creature",
+    "creatures",
+    "boss",
+    "vase",
+    "mur",
+    "porte",
+    "objet",
 }
 
 
@@ -735,7 +770,7 @@ class SkillManager:
     ) -> SkillDef:
         row = raw if isinstance(raw, dict) else {}
         name = str(row.get("name") or "").strip()
-        if not name:
+        if (not name) or self._is_generic_generated_name(name):
             name = self._fallback_skill_name(npc_role=npc_role, training_context=training_context, npc_name=npc_name)
         category = str(row.get("category") or "").strip().casefold()[:48] or "hybride"
         description = str(row.get("description") or "").strip()[:360]
@@ -768,6 +803,23 @@ class SkillManager:
             trainer_roles=tuple(trainer_roles[:8]),
             effects=tuple(effects[:8]),
         )
+
+    def _is_generic_generated_name(self, name: str) -> bool:
+        norm = self._norm(name)
+        if not norm:
+            return True
+        generic_names = {
+            "nouveau sort",
+            "new spell",
+            "new skill",
+            "nouvelle competence",
+            "nouvelle technique",
+            "competence",
+            "technique",
+            "skill",
+            "spell",
+        }
+        return norm in generic_names
 
     def _resolve_or_register_generated(self, catalog: dict[str, SkillDef], generated: SkillDef) -> tuple[SkillDef, bool]:
         for skill in catalog.values():
@@ -846,10 +898,27 @@ class SkillManager:
                 if word in _INTENT_STOPWORDS or len(word) < 4:
                     continue
                 # ignore very common verbs likely not an intent
-                if word in {"utilise", "lance", "applique", "emploie", "pratique", "travaille", "fais", "fait"}:
+                if word in {
+                    "utilise",
+                    "lance",
+                    "applique",
+                    "emploie",
+                    "pratique",
+                    "pratiquer",
+                    "travaille",
+                    "fais",
+                    "fait",
+                    "entraine",
+                    "entrainer",
+                    "entrainement",
+                    "exerce",
+                    "exercer",
+                    "repete",
+                    "repetition",
+                }:
                     continue
                 # preferentially keep words after "de/du/des/d" patterns
-                if idx > 0 and words[idx - 1] in {"de", "du", "des", "d"}:
+                if idx > 0 and words[idx - 1] in {"de", "du", "des", "d", "a", "au", "aux", "avec", "sur"}:
                     if word not in found:
                         found.append(word)
                 # also keep nouns after action verbs

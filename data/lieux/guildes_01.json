@@ -1,0 +1,7 @@
+{
+  "id": "guildes_01",
+  "title": "Guildes - Salle des contrats",
+  "narrator_text": "Ataryxia : Les sceaux claquent sur les parchemins pendant que les chefs de guilde marchandent.",
+  "npcs": ["Maitre de guilde", "Mercenaire", "Marchande assermentee"],
+  "choices": []
+}

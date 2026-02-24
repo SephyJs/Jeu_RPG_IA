@@ -1,0 +1,7 @@
+{
+  "id": "villas_manoirs_01",
+  "title": "Villas et manoirs - Jardins clos",
+  "narrator_text": "Ataryxia : Derriere les murs de pierre, la noblesse negocie et conspire loin des regards.",
+  "npcs": ["Majordome", "Noble heritiere", "Jardinier"],
+  "choices": []
+}

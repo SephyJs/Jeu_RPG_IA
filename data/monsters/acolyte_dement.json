@@ -1,0 +1,29 @@
+{
+  "id": "acolyte_dement",
+  "name": "Acolyte dement",
+  "aliases": ["acolyte dement", "fanatique"],
+  "archetype": "caster",
+  "tier": 2,
+  "description": "Un fanatique qui lance des salves instables.",
+  "combat": {
+    "base_hp": 17,
+    "base_dc": 13,
+    "base_attack_bonus": 4,
+    "base_damage_min": 3,
+    "base_damage_max": 7,
+    "hp_per_floor": 1.1,
+    "dc_per_5_floors": 1,
+    "attack_per_6_floors": 1,
+    "damage_per_8_floors": 1
+  },
+  "boss_modifiers": {
+    "hp_mult": 1.5,
+    "damage_mult": 1.45,
+    "dc_bonus": 2,
+    "attack_bonus": 2
+  },
+  "media": {
+    "image": "",
+    "clip": ""
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "epee_apprenti",
+  "name": "Epee d'apprenti",
+  "stack_max": 1,
+  "type": "weapon",
+  "slot": "weapon",
+  "rarity": "common",
+  "description": "Une lame simple, fiable pour les premiers combats.",
+  "stat_bonuses": {
+    "force": 1
+  },
+  "effects": [
+    {
+      "kind": "passive",
+      "name": "Tranchant",
+      "value": 1
+    }
+  ],
+  "value_gold": 14
+}

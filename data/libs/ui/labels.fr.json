@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Librairie des labels et boutons UI Telegram"
+  },
+  "entries": {
+    "ui.button.mode_dungeon": [
+      "🗡️ Donjon"
+    ],
+    "ui.button.mode_ataryxia": [
+      "✨ Ataryxia"
+    ],
+    "ui.button.status": [
+      "📍 Statut"
+    ],
+    "ui.button.save": [
+      "💾 Sauver"
+    ],
+    "ui.dungeon.action.enter": [
+      "Entrer donjon"
+    ],
+    "ui.dungeon.action.combat_active": [
+      "Combat en cours"
+    ],
+    "ui.dungeon.action.advance": [
+      "Monter etage"
+    ],
+    "ui.dungeon.action.attack": [
+      "Attaque"
+    ],
+    "ui.dungeon.action.skill": [
+      "Competence"
+    ],
+    "ui.dungeon.action.heal": [
+      "Soin"
+    ],
+    "ui.dungeon.action.spell": [
+      "Sort"
+    ],
+    "ui.dungeon.action.flee": [
+      "Fuite"
+    ],
+    "ui.dungeon.action.inventory": [
+      "Inventaire"
+    ],
+    "ui.dungeon.action.back": [
+      "Retour"
+    ],
+    "ui.dungeon.actions_title": [
+      "Actions Donjon:"
+    ],
+    "ui.dungeon.skill_menu_title": [
+      "Choix Competence:"
+    ],
+    "ui.dungeon.inventory_title": [
+      "Consommables utilisables:"
+    ],
+    "ui.dungeon.inventory_item_label": [
+      "{item} x{qty}"
+    ],
+    "ui.dungeon.inventory_empty": [
+      "Aucun consommable utile"
+    ]
+  }
+}

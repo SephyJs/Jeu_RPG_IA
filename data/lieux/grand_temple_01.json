@@ -1,0 +1,7 @@
+{
+  "id": "grand_temple_01",
+  "title": "Grand temple - Nef des serments",
+  "narrator_text": "Ataryxia : Les vitraux projettent une lumiere sacree sur les fideles agenouilles.",
+  "npcs": ["Grande pretresse", "Diacre", "Fidele"],
+  "choices": []
+}

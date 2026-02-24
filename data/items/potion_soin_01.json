@@ -1,0 +1,17 @@
+{
+  "id": "potion_soin_01",
+  "name": "Potion de soin",
+  "stack_max": 8,
+  "type": "consumable",
+  "slot": "",
+  "rarity": "common",
+  "description": "Recupere rapidement des points de vie.",
+  "stat_bonuses": {},
+  "effects": [
+    {
+      "kind": "heal",
+      "value": 8
+    }
+  ],
+  "value_gold": 12
+}

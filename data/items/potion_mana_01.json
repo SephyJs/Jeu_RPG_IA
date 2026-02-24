@@ -1,0 +1,17 @@
+{
+  "id": "potion_mana_01",
+  "name": "Potion de mana",
+  "stack_max": 8,
+  "type": "consumable",
+  "slot": "",
+  "rarity": "common",
+  "description": "Recharge le mana pour lancer des sorts.",
+  "stat_bonuses": {},
+  "effects": [
+    {
+      "kind": "mana",
+      "value": 8
+    }
+  ],
+  "value_gold": 13
+}

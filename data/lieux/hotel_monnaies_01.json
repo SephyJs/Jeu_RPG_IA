@@ -1,0 +1,7 @@
+{
+  "id": "hotel_monnaies_01",
+  "title": "Hotel des monnaies - Atelier de frappe",
+  "narrator_text": "Ataryxia : Le metal en fusion devient des pieces marquees au sceau de la couronne.",
+  "npcs": ["Maitre graveur", "Fondeur", "Controleur des poids"],
+  "choices": []
+}

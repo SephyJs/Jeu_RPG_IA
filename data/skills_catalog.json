@@ -75,6 +75,23 @@
       ]
     },
     {
+      "id": "discipline_de_place",
+      "name": "Discipline de Place",
+      "category": "hybride",
+      "description": "Technique developpee avec Pratique (Place).",
+      "difficulty": 2,
+      "primary_stats": [
+        "force",
+        "intelligence"
+      ],
+      "trainer_roles": [
+        "place"
+      ],
+      "effects": [
+        "effet_escrime"
+      ]
+    },
+    {
       "id": "etincelle",
       "name": "Etincelle",
       "category": "magie",
@@ -91,6 +108,23 @@
       ],
       "effects": [
         "sort_offensif_novice"
+      ]
+    },
+    {
+      "id": "forge_artisanale",
+      "name": "Forge artisanale",
+      "category": "artisanat",
+      "description": "Technique developpee avec Forgeron (Forgeron).",
+      "difficulty": 2,
+      "primary_stats": [
+        "magie",
+        "intelligence"
+      ],
+      "trainer_roles": [
+        "forgeron"
+      ],
+      "effects": [
+        "effet_forge"
       ]
     },
     {
@@ -148,6 +182,23 @@
       ],
       "effects": [
         "bonus_persuasion"
+      ]
+    },
+    {
+      "id": "nouveau_sort",
+      "name": "Canalisation improvisee",
+      "category": "magie",
+      "description": "Canalisation arcane rudimentaire pour l'entrainement.",
+      "difficulty": 5,
+      "primary_stats": [
+        "magie",
+        "intelligence"
+      ],
+      "trainer_roles": [
+        "clerc soignant"
+      ],
+      "effects": [
+        "effet narratif court"
       ]
     },
     {

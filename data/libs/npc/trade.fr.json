@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "lang": "fr",
+    "version": 1,
+    "description": "Phrases commerce PNJ"
+  },
+  "entries": {
+    "npc.trade.pending.buy": [
+      "Achat en attente: {item} x{count}."
+    ],
+    "npc.trade.pending.sell": [
+      "Vente en attente: {item} x{count}."
+    ],
+    "npc.trade.confirm": [
+      "Transaction confirmee.",
+      "Parfait, on valide l'echange."
+    ],
+    "npc.trade.cancel": [
+      "Transaction annulee.",
+      "On annule pour cette fois."
+    ]
+  }
+}

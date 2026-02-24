@@ -15,12 +15,38 @@ def _safe_int(value: object, default: int = 0) -> int:
 def skills_panel(state: GameState, on_change) -> None:
     _ = on_change
     ui.label("Competences").classes("text-lg font-semibold")
-    ui.separator()
 
     points = max(0, _safe_int(getattr(state, "skill_points", 0), 0))
-    ui.label(f"Points de competence disponibles: {points}").classes("text-sm")
-    ui.label("Les competences s'apprennent surtout en parlant aux PNJ metiers.").classes("text-xs opacity-70")
-    ui.label("Courbe XP des competences: non lineaire (exponentielle).").classes("text-xs opacity-70")
+    with ui.card().classes("w-full rounded-xl shadow-sm").style("padding:12px 14px; margin-top:6px;"):
+        ui.label(f"Points de competence disponibles: {points}").classes("text-sm font-semibold")
+        ui.label("Les competences s'apprennent surtout en parlant aux PNJ metiers.").classes("text-sm opacity-75")
+
+    gm_state = state.gm_state if isinstance(getattr(state, "gm_state", None), dict) else {}
+    skill_debug = gm_state.get("skill_debug") if isinstance(gm_state.get("skill_debug"), dict) else {}
+    if skill_debug:
+        intents = skill_debug.get("intents") if isinstance(skill_debug.get("intents"), list) else []
+        used_ids = skill_debug.get("used_skill_ids") if isinstance(skill_debug.get("used_skill_ids"), list) else []
+        track_preview = skill_debug.get("track_preview") if isinstance(skill_debug.get("track_preview"), list) else []
+        passive_lines = skill_debug.get("passive_lines") if isinstance(skill_debug.get("passive_lines"), list) else []
+        training_focus = bool(skill_debug.get("training_focus"))
+        message = str(skill_debug.get("message") or "").strip()
+
+        with ui.card().classes("w-full rounded-xl shadow-sm").style("padding:10px 12px; margin-top:8px; border:1px dashed #6b7280;"):
+            ui.label("Debug apprentissage (dernier message)").classes("text-sm font-semibold")
+            ui.label(f"Focus entrainement: {'oui' if training_focus else 'non'}").classes("text-xs opacity-80")
+            if message:
+                ui.label(f"Message: {message}").classes("text-xs opacity-75")
+            if intents:
+                ui.label("Intentions detectees: " + ", ".join(str(x) for x in intents[:4])).classes("text-xs opacity-80")
+            else:
+                ui.label("Intentions detectees: aucune").classes("text-xs opacity-70")
+            if used_ids:
+                ui.label("Competences reconnues dans le texte: " + ", ".join(str(x) for x in used_ids[:4])).classes("text-xs opacity-80")
+            if track_preview:
+                ui.label("Compteurs passifs: " + " | ".join(str(x) for x in track_preview[:4])).classes("text-xs opacity-80")
+            if passive_lines:
+                ui.label("Resultat passif: " + " | ".join(str(x) for x in passive_lines[:2])).classes("text-xs opacity-80")
+
     passive = state.skill_passive_practice if isinstance(getattr(state, "skill_passive_practice", {}), dict) else {}
     if passive:
         snippets: list[str] = []
@@ -32,16 +58,15 @@ def skills_panel(state: GameState, on_change) -> None:
             label = intent.replace("_", " ")
             snippets.append(f"{label}: {count}/{threshold}")
         if snippets:
-            ui.label("Pratique passive: " + " | ".join(snippets)).classes("text-xs opacity-70")
+            ui.label("Pratique passive: " + " | ".join(snippets)).classes("text-sm opacity-75").style("margin-top:6px;")
 
     skills = state.player_skills if isinstance(state.player_skills, list) else []
     if not skills:
-        ui.separator()
-        ui.label("Aucune competence apprise pour le moment.").classes("opacity-70")
+        with ui.card().classes("w-full rounded-xl shadow-sm").style("padding:12px; margin-top:10px;"):
+            ui.label("Aucune competence apprise pour le moment.").classes("opacity-70")
         return
 
-    ui.separator()
-    ui.label(f"Competences apprises: {len(skills)}").classes("text-sm opacity-80")
+    ui.label(f"Competences apprises: {len(skills)}").classes("text-sm opacity-80").style("margin-top:10px;")
     for row in skills[:80]:
         if not isinstance(row, dict):
             continue
@@ -58,20 +83,19 @@ def skills_panel(state: GameState, on_change) -> None:
         primary_stats = row.get("primary_stats") if isinstance(row.get("primary_stats"), list) else []
         stats_text = ", ".join(str(x) for x in primary_stats[:3] if isinstance(x, str))
         progress_value = min(max((xp / float(xp_to_next)) if xp_to_next > 0 else 1.0, 0.0), 1.0)
-
-        with ui.card().classes("w-full rounded-xl shadow-sm"):
-            with ui.row().classes("w-full items-center justify-between"):
-                ui.label(name).classes("font-semibold")
-                ui.label(f"Rang {rank} | Niv. {level}").classes("text-xs opacity-80")
-            ui.label(f"Categorie: {category} | Difficulte: {difficulty}/5").classes("text-xs opacity-80")
-            if xp_to_next > 0:
-                ui.label(f"XP competence: {xp}/{xp_to_next} | Utilisations: {uses}").classes("text-xs opacity-80")
-                ui.linear_progress(value=progress_value).props("instant-feedback")
-            else:
-                ui.label(f"XP competence: niveau max | Utilisations: {uses}").classes("text-xs opacity-80")
-            if stats_text:
-                ui.label(f"Stats cle: {stats_text}").classes("text-xs opacity-80")
-            if desc:
-                ui.label(desc).classes("text-sm")
-            if trainer:
-                ui.label(f"Appris via: {trainer}").classes("text-xs opacity-70")
+        summary = f"{name} · Rang {rank} · Niv. {level}"
+        with ui.card().classes("w-full rounded-xl shadow-sm").style("padding:6px 10px;"):
+            with ui.expansion(summary).classes("w-full").props("dense switch-toggle-side expand-separator"):
+                with ui.column().classes("w-full gap-1").style("padding:4px 2px 8px 2px;"):
+                    ui.label(f"Categorie: {category} | Difficulte: {difficulty}/5").classes("text-sm opacity-75")
+                    if xp_to_next > 0:
+                        ui.label(f"XP competence: {xp}/{xp_to_next} | Utilisations: {uses}").classes("text-sm opacity-80")
+                        ui.linear_progress(value=progress_value).props("instant-feedback")
+                    else:
+                        ui.label(f"XP competence: niveau max | Utilisations: {uses}").classes("text-sm opacity-80")
+                    if stats_text:
+                        ui.label(f"Stats cle: {stats_text}").classes("text-sm opacity-80")
+                    if desc:
+                        ui.label(desc).classes("text-sm leading-6")
+                    if trainer:
+                        ui.label(f"Appris via: {trainer}").classes("text-sm opacity-70")
